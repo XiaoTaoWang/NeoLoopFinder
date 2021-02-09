@@ -159,3 +159,6 @@ to explore it interactively)::
     In [9]: vis.plot_genes(filter_=['PRAME','BCRP4', 'RAB36', 'BCR', 'ABL1', 'NUP214'],label_aligns={'PRAME':'right','RAB36':'right'}, fontsize=9) 
     In [10]: vis.plot_chromosome_bar(name_size=11, coord_size=4.8)
     In [11]: vis.outfig('K562.A0.pdf')
+
+.. image:: ./images/fig1b.png
+        :align: center
