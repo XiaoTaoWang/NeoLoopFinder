@@ -1,0 +1,118 @@
+#!/usr/bin/env python
+
+# Created on Mon Jan 06 11:14:13 2020
+# Author: XiaoTao Wang
+
+## Required modules
+
+import argparse, sys, logging, logging.handlers, traceback, neoloop
+
+currentVersion = neoloop.__version__
+
+
+def getargs():
+    ## Construct an ArgumentParser object for command-line arguments
+    parser = argparse.ArgumentParser(description='''Assemble complex SVs given an individual SV list.''',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    
+    # Version
+    parser.add_argument('-v', '--version', action='version',
+                        version=' '.join(['%(prog)s',currentVersion]),
+                        help='Print version number and exit.')
+    
+    # Output
+    parser.add_argument('-O', '--output', help='Output prefix.')
+
+    # Input
+    parser.add_argument('-B', '--break-points', help='''Path to a TXT file containing pairs
+                        of break points.''')
+    parser.add_argument('-H', '--hic', help='''Cool URI.''')
+    parser.add_argument('-R', '--region-size', default=5000000, type=int,
+                        help = '''The extended genomic span of SV break points.(bp)''')
+    parser.add_argument('--balance-type', default='CNV', choices=['CNV', 'ICE'],
+                        help = 'Normalization method.')
+    parser.add_argument('--protocol', default='insitu', choices=['insitu', 'dilution'],
+                        help='''Experimental protocol of your Hi-C.''')
+    parser.add_argument('--nproc', default=1, type=int, help='Number of worker processes.')
+    parser.add_argument('--logFile', default = 'assembleSVs.log', help = '''Logging file name.''')
+
+    ## Parse the command-line arguments
+    commands = sys.argv[1:]
+    if not commands:
+        commands.append('-h')
+    args = parser.parse_args(commands)
+    
+    return args, commands
+
+
+def run():
+
+    # Parse Arguments
+    args, commands = getargs()
+    # Improve the performance if you don't want to run it
+    if commands[0] not in ['-h', '-v', '--help', '--version']:
+        ## Root Logger Configuration
+        logger = logging.getLogger()
+        logger.setLevel(10)
+        console = logging.StreamHandler()
+        filehandler = logging.handlers.RotatingFileHandler(args.logFile,
+                                                           maxBytes=100000,
+                                                           backupCount=5)
+        # Set level for Handlers
+        console.setLevel('INFO')
+        filehandler.setLevel('INFO')
+        # Customizing Formatter
+        formatter = logging.Formatter(fmt = '%(name)-25s %(levelname)-7s @ %(asctime)s: %(message)s',
+                                      datefmt = '%m/%d/%y %H:%M:%S')
+        
+        ## Unified Formatter
+        console.setFormatter(formatter)
+        filehandler.setFormatter(formatter)
+        # Add Handlers
+        logger.addHandler(console)
+        logger.addHandler(filehandler)
+        
+        ## Logging for argument setting
+        arglist = ['# ARGUMENT LIST:',
+                   '# Output Prefix = {0}'.format(args.output),
+                   '# Break Points = {0}'.format(args.break_points),
+                   '# Cooler URI = {0}'.format(args.hic),
+                   '# Extended Genomic Span = {0}bp'.format(args.region_size),
+                   '# Balance Type = {0}'.format(args.balance_type),
+                   '# Experimental protocol = {0}'.format(args.protocol),
+                   '# Number of Processes = {0}'.format(args.nproc),
+                   '# Log file name = {0}'.format(args.logFile)
+                   ]
+        argtxt = '\n'.join(arglist)
+        logger.info('\n' + argtxt)
+
+        from neoloop.assembly import assembleSV
+        import cooler
+
+        if args.balance_type == 'CNV':
+            balance = 'sweight'
+        else:
+            balance = 'weight'
+
+        try:
+            clr = cooler.Cooler(args.hic)
+            logger.info('Filtering SVs by checking distance decay of the induced contacts ...')
+            work = assembleSV(clr, args.break_points, span=args.region_size, col=balance, n_jobs=args.nproc,
+                            protocol=args.protocol)
+            logger.info('{0} SVs left'.format(len(work.queue)))
+            logger.info('Building SV connecting graph ...')
+            work.build_graph()
+            logger.info('Discovering and re-ordering complex SVs ...')
+            work.find_complexSV()
+            allele = len(work.alleles)
+            logger.info('Called {0} connected assemblies'.format(allele))
+            logger.info('Output ...')
+            work.output_all(args.output+'.assemblies.txt')
+            
+            logger.info('Done')
+        except:
+            traceback.print_exc(file = open(args.logFile, 'a'))
+            sys.exit(1)
+
+if __name__ == '__main__':
+    run()

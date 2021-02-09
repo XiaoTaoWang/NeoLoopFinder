@@ -1,0 +1,122 @@
+#!/usr/bin/env python
+
+# Created on Tue Nov 12 19:05:11 2019
+# Author: XiaoTao Wang
+
+## Required modules
+
+import argparse, sys, logging, logging.handlers, traceback, neoloop
+
+currentVersion = neoloop.__version__
+
+
+def getargs():
+    ## Construct an ArgumentParser object for command-line arguments
+    parser = argparse.ArgumentParser(description='''Generate a Hi-C matrix given a normal Hi-C cool
+                                     file and a genomic CNV profile in bedGraph format.''',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    
+    # Version
+    parser.add_argument('-v', '--version', action='version',
+                        version=' '.join(['%(prog)s',currentVersion]),
+                        help='Print version number and exit.')
+
+    
+    parser.add_argument('--normal-cool',
+                        help='''Cool URI of a normal cell''')
+    parser.add_argument('--cancer-cool',
+                        help='''Cool URI of a cancer cell''')
+    parser.add_argument('--cnv-file',
+                        help='''Copy number profile from the same cancer cell.''')
+    parser.add_argument('--output',
+                        help='''Output folder name.''')
+    parser.add_argument('--exclude', nargs = '*', default = ['chrY','chrM'],
+                        help = '''List of chromosomes to exclude.''')
+    parser.add_argument('--ploidy', default=3, type=int, help='''Ploidy of the cancer genome''')
+    parser.add_argument('--nproc', default=1, type=int, help='Number of worker processes.')
+    parser.add_argument('--logFile', default = 'cnvsim.log', help = '''Logging file name.''')
+
+    ## Parse the command-line arguments
+    commands = sys.argv[1:]
+    if not commands:
+        commands.append('-h')
+    args = parser.parse_args(commands)
+    
+    return args, commands
+
+
+def run():
+
+    # Parse Arguments
+    args, commands = getargs()
+    # Improve the performance if you don't want to run it
+    if commands[0] not in ['-h', '-v', '--help', '--version']:
+        ## Root Logger Configuration
+        logger = logging.getLogger()
+        logger.setLevel(10)
+        console = logging.StreamHandler()
+        filehandler = logging.handlers.RotatingFileHandler(args.logFile,
+                                                           maxBytes=100000,
+                                                           backupCount=5)
+        # Set level for Handlers
+        console.setLevel('INFO')
+        filehandler.setLevel('INFO')
+        # Customizing Formatter
+        formatter = logging.Formatter(fmt = '%(name)-25s %(levelname)-7s @ %(asctime)s: %(message)s',
+                                      datefmt = '%m/%d/%y %H:%M:%S')
+        
+        ## Unified Formatter
+        console.setFormatter(formatter)
+        filehandler.setFormatter(formatter)
+        # Add Handlers
+        logger.addHandler(console)
+        logger.addHandler(filehandler)
+        
+        ## Logging for argument setting
+        arglist = ['# ARGUMENT LIST:',
+                   '# Normal Cool = {0}'.format(args.normal_cool),
+                   '# Cancer Cool = {0}'.format(args.cancer_cool),
+                   '# CNV Profile = {0}'.format(args.cnv_file),
+                   '# Output Folder = {0}'.format(args.output),
+                   '# Excluded chromosomes = {0}'.format(args.exclude),
+                   '# Ploidy of the cancer = {0}'.format(args.ploidy),
+                   '# Number of Processes = {0}'.format(args.nproc),
+                   '# Log file name = {0}'.format(args.logFile)
+                   ]
+        argtxt = '\n'.join(arglist)
+        logger.info('\n' + argtxt)
+
+        from neoloop.cnv.simcnv import Train, SimCNV
+        import cooler
+
+        try:
+            logger.info('Learn scaling factor from cancer Hi-C ...')
+            clr = cooler.Cooler(args.cancer_cool)
+            work = Train(clr, args.cnv_file, n_jobs=args.nproc)
+            work.expected_by_cnv()
+            trans  = work.trans_factor(ref=args.ploidy)
+            cis = work.cis_factor(ref=args.ploidy)
+            
+            logger.info('Extract all combinations of copy numbers ...')
+            clr = cooler.Cooler(args.normal_cool)
+            sim = SimCNV(clr, args.cnv_file, trans_factor=trans, cis_factor=cis, out_folder=args.output)
+            logger.info('Iterate all chromosomes ...')
+            for i, c1 in enumerate(clr.chromnames):
+                for j, c2 in enumerate(clr.chromnames):
+                    if i > j:
+                        continue
+                    if (c1 in args.exclude) or (c2 in args.exclude):
+                        continue
+                    logger.info('{0}, {1} ...'.format(c1, c2))
+                    if c1 == c2:
+                        sim.correct_cis(c1, ref=args.ploidy)
+                    else:
+                        sim.correct_trans(c1, c2, ref=args.ploidy)
+            
+            logger.info('Done')
+        except:
+            traceback.print_exc(file = open(args.logFile, 'a'))
+            sys.exit(1)
+
+if __name__ == '__main__':
+    run()

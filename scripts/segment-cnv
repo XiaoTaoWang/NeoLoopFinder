@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+
+# Created on Tue Nov 12 19:05:11 2019
+# Author: XiaoTao Wang
+
+## Required modules
+
+import argparse, sys, logging, logging.handlers, traceback, neoloop
+
+currentVersion = neoloop.__version__
+
+
+def getargs():
+    ## Construct an ArgumentParser object for command-line arguments
+    parser = argparse.ArgumentParser(description='''Perform HMM segmentation on a pre-calculated
+                                     copy number variation profile.''',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    
+    # Version
+    parser.add_argument('-v', '--version', action='version',
+                        version=' '.join(['%(prog)s',currentVersion]),
+                        help='Print version number and exit.')
+
+    parser.add_argument('--cnv-file',
+                        help='''Copy number profile in bedGraph format.''')
+    parser.add_argument('--ploidy', type=int, default=2, help='Ploidy of the cell.')
+    parser.add_argument('--binsize', type=int, help='Bin size in base pairs.')
+    parser.add_argument('--output',
+                        help='''Output file path.''')
+    parser.add_argument('--nproc', default=1, type=int, help='Number of worker processes.')
+    parser.add_argument('--logFile', default = 'cnv-seg.log', help = '''Logging file name.''')
+
+    ## Parse the command-line arguments
+    commands = sys.argv[1:]
+    if not commands:
+        commands.append('-h')
+    args = parser.parse_args(commands)
+    
+    return args, commands
+
+
+def run():
+
+    # Parse Arguments
+    args, commands = getargs()
+    # Improve the performance if you don't want to run it
+    if commands[0] not in ['-h', '-v', '--help', '--version']:
+        ## Root Logger Configuration
+        logger = logging.getLogger()
+        logger.setLevel(10)
+        console = logging.StreamHandler()
+        filehandler = logging.handlers.RotatingFileHandler(args.logFile,
+                                                           maxBytes=100000,
+                                                           backupCount=5)
+        # Set level for Handlers
+        console.setLevel('INFO')
+        filehandler.setLevel('INFO')
+        # Customizing Formatter
+        formatter = logging.Formatter(fmt = '%(name)-25s %(levelname)-7s @ %(asctime)s: %(message)s',
+                                      datefmt = '%m/%d/%y %H:%M:%S')
+        
+        ## Unified Formatter
+        console.setFormatter(formatter)
+        filehandler.setFormatter(formatter)
+        # Add Handlers
+        logger.addHandler(console)
+        logger.addHandler(filehandler)
+        
+        ## Logging for argument setting
+        arglist = ['# ARGUMENT LIST:',
+                   '# CNV Profile = {0}'.format(args.cnv_file),
+                   '# Ploidy = {0}'.format(args.ploidy),
+                   '# Bin Size = {0}'.format(args.binsize),
+                   '# Output Path = {0}'.format(args.output),
+                   '# Number of Processes = {0}'.format(args.nproc),
+                   '# Log file name = {0}'.format(args.logFile)
+                   ]
+        argtxt = '\n'.join(arglist)
+        logger.info('\n' + argtxt)
+
+        from neoloop.cnv.segcnv import HMMsegment
+
+        try:
+            logger.info('Loading CNV profile ...')
+            work = HMMsegment(args.cnv_file, res=args.binsize, nproc=args.nproc, ploidy=args.ploidy)
+            logger.info('Perform segmentation ...')
+            work.segment()
+            logger.info('Writing results into bedGraph ...')
+            work.output(args.output)
+            
+            logger.info('Done')
+        except:
+            traceback.print_exc(file = open(args.logFile, 'a'))
+            sys.exit(1)
+
+if __name__ == '__main__':
+    run()
