@@ -2,7 +2,7 @@
 #cython: boundscheck=False
 #cython: cdivision=True
 
-import itertools
+import itertools, matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
@@ -13,6 +13,12 @@ from neoloop.visualize.loops import Loops
 from neoloop.assembly import complexSV
 from neoloop.callers import Peakachu
 from scipy import sparse
+
+new_rc_params = {'text.usetex': False,
+"svg.fonttype": 'none'
+}
+
+matplotlib.rcParams.update(new_rc_params)
 
 class Triangle(Peakachu):
 
