@@ -1,6 +1,8 @@
-#cython: language_level=3
-#cython: boundscheck=False
-#cython: cdivision=True
+"""
+Created on Wed Jun 27 18:48:42 2018
+
+@author: XiaoTao Wang
+"""
 
 import pickle, logging, neoloop, os, joblib, math
 import numpy as np
@@ -97,6 +99,7 @@ class Fusion(object):
             50000: os.path.join(data_folder, 'gm.dilution.expected.50k.pkl')
         },
         'insitu':{
+            5000: os.path.join(data_folder, 'gm.insitu.expected.5k.pkl'),
             10000: os.path.join(data_folder, 'gm.insitu.expected.10k.pkl'),
             20000: os.path.join(data_folder, 'gm.insitu.expected.20k.pkl'),
             25000: os.path.join(data_folder, 'gm.insitu.expected.25k.pkl')
@@ -128,7 +131,7 @@ class Fusion(object):
                 if trim:
                     minx_2 = max(p2 - r, p1 + int((p2 - p1) / 2)) # handle short inversion ++
                 else:
-                    minx_2 = max(p2 - r, p1)
+                    minx_2 = max(p2 - r, p1 + 1)
 
             k_p = [minx_1 * res, min(p1 * res + res, chromsize1),
                    min(p2 * res + res, chromsize2), minx_2 * res]
@@ -161,7 +164,7 @@ class Fusion(object):
                     maxx_1 = min((p1 + r + 1) * res,
                                  (p2 - int((p2 - p1) / 2)) * res) # handle short inversion --
                 else:
-                    maxx_1 = min((p1 + r + 1) * res, p2 * res)
+                    maxx_1 = min((p1 + r + 1) * res, p2 * res - res)
             maxx_2 = min((p2 + r + 1) * res, chromsize2)
             k_p = [maxx_1, p1 * res, p2 * res, maxx_2]
             # part 1
@@ -174,10 +177,16 @@ class Fusion(object):
                                                     (self.c2, k_p[2], k_p[3]))
             M3 = M3[::-1,:] # - --> +, + --> -
         else:
-            maxx = min((p1 + r + 1) * res, chromsize1)
-            minx = max(p2 - r, 0)
-            k_p = [maxx, p1 * res,
-                   min(p2 * res + res, chromsize2), minx * res] # no intra SV is -+ ?
+            if self.c1 != self.c2:
+                maxx = min((p1 + r + 1) * res, chromsize1)
+                minx = max(p2 - r, 0)
+                k_p = [maxx, p1 * res,
+                    min(p2 * res + res, chromsize2), minx * res] # no intra SV is -+ ?
+            else:
+                maxx_1 = min(p1 + r + 1, p2 - int((p2 - p1) / 2) - 1)
+                minx_2 = max(p2 - r, p1 + int((p2 - p1) / 2) + 1)
+                k_p = [maxx_1 * res, p1 * res, min(p2 * res + res, chromsize2), minx_2 * res]
+
             # part 1
             M1 = self.clr.matrix(balance=col).fetch((self.c1, k_p[1], k_p[0]))
             M1 = M1[::-1,::-1] # - --> +
@@ -515,7 +524,7 @@ class Peakachu():
         self.M = sparse.csr_matrix((data, (R, C)), shape=matrix.shape)
         self.ridx, self.cidx = R, C
         self.r = res
-        if res == 10000:
+        if (res == 10000) or (res == 5000):
             self.w = 5
         else:
             self.w = 3
@@ -556,6 +565,10 @@ class Peakachu():
                 25000: {
                     'ctcf': os.path.join(data_folder, 'insitu.ctcf.25k.pkl'),
                     'h3k27ac': os.path.join(data_folder, 'insitu.h3k27ac.25k.pkl')
+                },
+                5000: {
+                    'ctcf': os.path.join(data_folder, 'insitu.h3k27ac.5k.pkl'),
+                    'h3k27ac': os.path.join(data_folder, 'insitu.h3k27ac.5k.pkl'),
                 }
             }
         }

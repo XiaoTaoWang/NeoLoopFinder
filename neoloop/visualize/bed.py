@@ -1,7 +1,3 @@
-#cython: language_level=3
-#cython: boundscheck=False
-#cython: cdivision=True
-
 from coolbox.core.track import Bed
 from coolbox.plots.track import PlotBed
 from coolbox.utilities import ReadBed, Interval, IntervalTree
@@ -513,11 +509,15 @@ class plotGenes(PlotBed):
         """
         from matplotlib.patches import Polygon
 
-        vertices = self._draw_arrow(ax, bed.start, bed.end, bed.strand, ypos)
-        ax.add_patch(Polygon(vertices, closed=True, fill=True,
-                            edgecolor=edgecolor,
-                            facecolor=rgb,
-                            linewidth=0.5))
+        if bed.strand not in ['+', '-']:
+            ax.add_patch(Rectangle((bed.start, ypos), bed.end - bed.start, self.properties['interval_height'],
+                                   edgecolor=edgecolor, facecolor=rgb, linewidth=0.5))
+        else:
+            vertices = self._draw_arrow(ax, bed.start, bed.end, bed.strand, ypos)
+            ax.add_patch(Polygon(vertices, closed=True, fill=True,
+                                 edgecolor=edgecolor,
+                                 facecolor=rgb,
+                                 linewidth=0.5))
     
     def _draw_arrow(self, ax, start, end, strand, ypos):
 

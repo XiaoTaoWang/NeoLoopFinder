@@ -1,7 +1,3 @@
-#cython: language_level=3
-#cython: boundscheck=False
-#cython: cdivision=True
-
 import logging
 import numpy as np
 from neoloop.util import find_chrom_pre
@@ -15,7 +11,7 @@ log = logging.getLogger(__name__)
 
 def filterSV(clr, c1, c2, p1, p2, s1, s2, note, span, col, protocol, cutoff):
 
-    fu = Fusion(clr, c1, c2, p1, p2, s1, s2, note, span=span, col=col, protocol=protocol)
+    fu = Fusion(clr, c1, c2, p1, p2, s1, s2, note, span=span, col=col, protocol=protocol, trim=True)
     fu.detect_bounds()
     fu.allele_slope()
     fu.correct_heterozygosity()
@@ -41,7 +37,7 @@ def filterAssembly(clr, ID, span, col, path, protocol):
 
 class assembleSV(object):
 
-    def __init__(self, clr, sv_fil, span=5000000, col='sweight', minD=850000, minIV=850000,
+    def __init__(self, clr, sv_fil, span=5000000, col='sweight', minIntra=500000,
         n_jobs=1, protocol='insitu', r_cutoff=0.6):
 
         self.clr = clr
@@ -51,7 +47,7 @@ class assembleSV(object):
         self.balance_type = col
         self.n_jobs = n_jobs
         # read SVs
-        sv_list = load_translocation_fil(sv_fil, clr.binsize, minD, minIV)
+        sv_list = load_translocation_fil(sv_fil, clr.binsize, minIntra)
         
         # filter sv by checking power-law decay of the induced interactions
         params = []

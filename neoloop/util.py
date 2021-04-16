@@ -1,7 +1,8 @@
-#cython: language_level=3
-#cython: boundscheck=False
-#cython: cdivision=True
+"""
+Created on Tue Sep 18 22:15:12 2018
 
+@author: XiaoTao Wang
+"""
 import numpy as np
 import bisect, os
 
@@ -61,7 +62,7 @@ def extract_sv_region(hic_pool, c1, c2, pos_1, pos_2, strand_1, strand_2,
     return k_p, pos_1, pos_2, strand_1, strand_2
 
 
-def load_translocation_fil(fil_path, res, minD, minIV):
+def load_translocation_fil(fil_path, res, minIntra):
 
     lines = set()
     with open(fil_path, 'r') as source:
@@ -85,19 +86,12 @@ def load_translocation_fil(fil_path, res, minD, minIV):
             s1, s2 = strands[0], strands[1]
             # Filter by intra SV span
             if c1==c2:
-                if note.lower()=='deletion':
-                    if abs(p2-p1) < minD:
-                        continue
-                    if p1 > p2:
-                        p1, p2 = p2, p1
-                        s1, s2 = s2, s1
-                elif note.lower()=='inversion':
-                    if abs(p2-p1) < minIV:
-                        continue
-                    if p1 > p2:
-                        p1, p2 = p2, p1
-                        s1, s2 = s2, s1
-                if (s1=='-') and (s2=='+'):
+                if abs(p2-p1) < minIntra:
+                    continue
+                if p1 > p2:
+                    p1, p2 = p2, p1
+                    s1, s2 = s2, s1
+                if (s1 == '-') and (s2 == '+') and (abs(p2-p1) < minIntra*2): # duplicate
                     continue
                         
             lines.add((c1.lstrip('chr'), p1, s1, c2.lstrip('chr'), p2, s2, note))
