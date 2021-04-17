@@ -324,7 +324,7 @@ class Fusion(object):
         
         return b
     
-    def _extract_xy(self, valid_pixel, maxdis=2000000, mink=5):
+    def _extract_xy(self, valid_pixel, maxdis=2000000, mink=3):
 
         x, y = np.where(valid_pixel)
         M = self.fusion_matrix
@@ -392,7 +392,6 @@ class Fusion(object):
             if inlier_mask.sum() < min_samples:
                 rscore = 0
                 slope = 0
-                warning = False
             else:
                 sX = X[inlier_mask]
                 sY = Y[inlier_mask]
@@ -419,7 +418,7 @@ class Fusion(object):
             d_g_slopes = []
             m_g_rscores = []
             m_g_slopes = []
-            for maxdis in [500000, 1000000, 2000000, 3000000, 5000000, 8000000]:
+            for maxdis in [400000, 1000000, 1500000]:
                 for mink in [3]:
                     # middle
                     inter_mask = np.zeros(shape, dtype=bool)
