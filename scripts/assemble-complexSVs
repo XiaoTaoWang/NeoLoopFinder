@@ -78,6 +78,7 @@ def run():
         arglist = ['# ARGUMENT LIST:',
                    '# Output Prefix = {0}'.format(args.output),
                    '# Break Points = {0}'.format(args.break_points),
+                   '# Minimum fragment size = {0}bp'.format(args.minimum_size),
                    '# Cooler URI = {0}'.format(args.hic),
                    '# Extended Genomic Span = {0}bp'.format(args.region_size),
                    '# Balance Type = {0}'.format(args.balance_type),
