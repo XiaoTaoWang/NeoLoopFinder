@@ -5,13 +5,13 @@ from neoloop.callers import Fusion
 from neoloop.util import map_coordinates, load_translocation_fil
 from joblib import Parallel, delayed
 import networkx as nx
-from networkx.algorithms import all_shortest_paths, has_path
+from networkx.algorithms import all_simple_paths, has_path
 
 log = logging.getLogger(__name__)
 
 def filterSV(clr, c1, c2, p1, p2, s1, s2, note, span, col, protocol, cutoff):
 
-    fu = Fusion(clr, c1, c2, p1, p2, s1, s2, note, span=span, col=col, protocol=protocol, trim=True)
+    fu = Fusion(clr, c1, c2, p1, p2, s1, s2, note, span=span, col=col, protocol=protocol, trim=False)
     fu.detect_bounds()
     fu.allele_slope()
     fu.correct_heterozygosity()
@@ -20,7 +20,7 @@ def filterSV(clr, c1, c2, p1, p2, s1, s2, note, span, col, protocol, cutoff):
         Map = map_coordinates(fu.k_p, clr.binsize, c1, c2)[1]
         up = Map[fu.up_i]
         down = Map[fu.down_i]
-        record = [node, (c1, up[1], fu.k_p[1]), (c2, fu.k_p[2], down[1])]
+        record = [node, (c1, up[1], p1), (c2, p2, down[1])]
         return record
     else:
         return
@@ -72,15 +72,22 @@ class assembleSV(object):
             nodes[k1] = n
             nodes[k2] = n
 
-        G = nx.DiGraph()
+        queue = []
         for sv1 in nodes:
             for sv2 in nodes:
                 if nodes[sv1] == nodes[sv2]:
                     continue
-                dis = self.connect(sv1, sv2)
-                if dis < np.inf:
-                    G.add_weighted_edges_from([(sv1, sv2, dis)])
-        
+                if self.connect(sv1, sv2):
+                    ID = self._change_format((sv1, sv2))
+                    queue.append((self.clr, ID, self.span, self.balance_type, (sv1, sv2), self.protocol))
+
+        jobs = Parallel(n_jobs=self.n_jobs, verbose=10)(delayed(filterAssembly)(*i) for i in queue)
+        G = nx.DiGraph()
+        for ck, edge in jobs:
+            if ck:
+                sv1, sv2 = edge
+                G.add_weighted_edges_from([(sv1, sv2, 1)])
+
         self.graph = G
         self.nodemap = nodes
     
@@ -95,7 +102,7 @@ class assembleSV(object):
                 pre = has_path(self.graph, n1, n2)
                 if pre:
                     # do not consider edge weight
-                    paths = list(all_shortest_paths(self.graph, n1, n2, weight=None))
+                    paths = list(all_simple_paths(self.graph, n1, n2))
                     for p in paths:
                         if not self._containloop(p):
                             pool.append((len(p), p))
@@ -196,18 +203,18 @@ class assembleSV(object):
         if s12 == '-':
             if s21 == '+':
                 o, itr = self._check_overlap(d1, u2)
-                if (o > ori) and (itr > 4*self.res):
+                if (o > ori) and (itr > 0):
                     ori = o
         else:
             if s21 == '-':
                 o, itr = self._check_overlap(d1, u2)
-                if (o > ori) and (itr > 4*self.res):
+                if (o > ori) and (itr > 0):
                     ori = o
         
         if ori > 0:
-            return 1 / ori
+            return True
         else:
-            return np.inf
+            return False
     
     def _change_format(self, path):
 
@@ -270,6 +277,7 @@ class complexSV(Fusion):
         self.span = span
         self.flexible = flexible
         self.slopes = slopes
+        self.ID = candidate
         
         if col in ['weight', 'sweight']:
             self.balance_type = col
@@ -399,13 +407,13 @@ class complexSV(Fusion):
             if to[i]=='+': # 5 --> 3
                 b1 = tb[i][1]
                 b2 = tb[i+1][2]
-                assert b1 < b2
+                assert b1 < b2, self.ID
                 blocks.append([tb[i][0], b1, b2])
                 orients.append('+')
             else:
                 b1 = tb[i][2]
                 b2 = tb[i+1][1]
-                assert b1 > b2
+                assert b1 > b2, self.ID
                 blocks.append([tb[i][0], b2, b1])
                 orients.append('-')
         blocks.append(tb[-1])
@@ -491,7 +499,7 @@ class complexSV(Fusion):
                 _rscores = []
                 _slopes = []
                 warning = []
-                for maxdis in [400000, 1000000, 1500000, 2000000]:
+                for maxdis in [500000, 1000000, 2000000, 3000000, 5000000, 8000000]:
                     local_exp = self._extract_xy(valid_pixel, mink=3, maxdis=maxdis)
                     r, s, w = self.linear_regression(local_exp, self.expected, min_samples=5)
                     warning.append(w)
@@ -546,7 +554,6 @@ class complexSV(Fusion):
             if np.any(table.diagonal(i)==0):
                 connectivity = False
         self.connectivity = connectivity
-
     
     def index_to_coordinates(self, loop_list):
 
