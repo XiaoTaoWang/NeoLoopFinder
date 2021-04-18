@@ -85,12 +85,10 @@ The input SV file to the command ``assemble-complexSVs`` should contain followin
 
 1. **chrA**: The chromosome name of the 1st breakpoint.
 2. **chrB**: The chromosome name of the 2nd breakpoint.
-3. **orientation**: The orientation type of the fusion. Intra-chromosomal SVs have 3 types of orientations:
-   +- (deletion), ++ (inversion) and -- (inversion), while inter-chromosomal translocations
-   may have 4 types of orientations: +-, ++, --, and -+.
+3. **orientation**: The orientation type of the fusion, one of ++, +-, -+, or --.
 4. **b1**: The position of the 1st breakpoint on *chrA*.
 5. **b2**: The position of the 2nd breakpoint on *chrB*.
-6. **type**: SV type. Allowable choices are: *deletion*, *inversion* and *translocation*.
+6. **type**: SV type. Allowable choices are: *deletion*, *inversion*, *duplication*, and *translocation*.
 
 
 Tutorial
