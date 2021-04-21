@@ -1,13 +1,9 @@
-# Created on Wed Dec 24 15:26:26 2014
+# Created on Wed Dec 21 15:26:26 2019
 
 # Author: XiaoTao Wang
 
 """
-Setup script for hicpeaks.
-
-This is a free software under GPLv3. Therefore, you can modify, redistribute
-or even mix it with other GPL-compatible codes. See the file LICENSE
-included with the distribution for more details.
+Setup script for NeoLoopFinder.
 
 """
 import os, sys, neoloop, glob
@@ -31,7 +27,7 @@ setuptools.setup(
     author = neoloop.__author__,
     author_email = 'wangxiaotao686@gmail.com',
     url = 'https://github.com/XiaoTaoWang/neoloop/',
-    description = 'Predict neo loops induced by structural variations',
+    description = 'Predict neo-loops induced by structural variations',
     keywords = 'Hi-C cooler cancer enhancer hijacking',
     long_description = read('README.rst'),
     long_description_content_type='text/x-rst',
