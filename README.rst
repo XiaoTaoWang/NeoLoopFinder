@@ -1,5 +1,9 @@
+
 Neo-loop Finder
 ***************
+.. image:: https://codeocean.com/codeocean-assets/badge/open-in-code-ocean.svg
+   :target: https://codeocean.com/capsule/8407443/tree/v1
+
 NeoLoopFinder is a computational framework for detecting enhancer-hijacking events
 from Hi-C data in re-arranged genomes. Given Hi-C contact data and SV breakpoints in
 the genome, NeoLoopFinder can eliminate CNV biases, assemble complex SVs whenever possible,
