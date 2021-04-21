@@ -26,7 +26,7 @@ setuptools.setup(
     version = neoloop.__version__,
     author = neoloop.__author__,
     author_email = 'wangxiaotao686@gmail.com',
-    url = 'https://github.com/XiaoTaoWang/neoloop/',
+    url = 'https://github.com/XiaoTaoWang/NeoLoopFinder',
     description = 'Predict neo-loops induced by structural variations',
     keywords = 'Hi-C cooler cancer enhancer hijacking',
     long_description = read('README.rst'),
