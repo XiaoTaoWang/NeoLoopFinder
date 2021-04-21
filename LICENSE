@@ -1,3 +1,23 @@
-Copyright (c) 2020 Xiaotao Wang
+Copyright (c) 2020, Xiaotao Wang and Feng Yue
+All rights reserved.
 
-Use of the Code or any part thereof for commercial or clinical purposes is strictly prohibited without the approval from the authors.
+This software is provided free of charge to the academic research community for non-commercial
+research and educational purposes only. It may not be redistributed in any form,
+without prior written permission from the author. Permission is granted to modify the code
+for your own personal use, but modified versions must retain this copyright notice and must
+not be distributed.
+
+If utilization of NeoLoopFinder (or the modified versions) results in a publication, please
+cite the following publication:
+
+Wang, X., Xu, J., Zhang, B., Hou, Y., Song, F., Lyu, H., Yue, F. Genome-wide detection of
+enhancer-hijacking events from chromatin interaction data in re-arranged genomes. Nat Methods. 2021.
+
+For information on the use for a commercial purpose or by a commercial or for-profit entity,
+please contact Dr. Xiaotao Wang (wangxiaotao686@gmail.com) or Dr. Feng Yue (yue@northwestern.edu).
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

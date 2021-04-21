@@ -7,6 +7,11 @@ normalize allelic effects within local assemblies, and predict SV-induced neo-lo
 facilitate visualization and the integration with other omics data, NeoLoopFinder also provides
 a module to generate browser-like plots for local SV assemblies.
 
+Citation
+========
+Wang, X., Xu, J., Zhang, B., Hou, Y., Song, F., Lyu, H., Yue, F. Genome-wide detection of
+enhancer-hijacking events from chromatin interaction data in re-arranged genomes. Nat Methods. 2021.
+
 
 Installation
 ============
