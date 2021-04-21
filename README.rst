@@ -15,18 +15,8 @@ enhancer-hijacking events from chromatin interaction data in re-arranged genomes
 
 Installation
 ============
-The code was developed and tested on Linux operating system, here are the detailed hardware information and
-version numbers::
-
-    compiler   : GCC 7.3.0
-    system     : Linux
-    release    : 3.10.0-862.el7.x86_64
-    machine    : x86_64
-    processor  : x86_64
-    CPU cores  : 28
-    interpreter: 64bit
-
-All dependencies can be installed using `conda <https://conda.io/miniconda.html>`_::
+NeoLoopFinder and all the dependencies can be installed using `conda <https://conda.io/miniconda.html>`_
+or `pip <https://pypi.org/project/pip/>`_::
 
     $ conda config --add channels defaults
     $ conda config --add channels bioconda
@@ -34,11 +24,7 @@ All dependencies can be installed using `conda <https://conda.io/miniconda.html>
     $ conda create -n neoloop python=3.7.1 cython=0.29.13 cooler=0.8.6 numpy=1.17.2 scipy=1.3.1 joblib=0.13.2 scikit-learn=0.20.2 networkx=1.11 pyensembl=1.8.0 matplotlib=3.1.1 pybigwig=0.3.17 pomegranate=0.10.0
     $ conda activate neoloop
     $ conda install -c r r rpy2 r-mgcv
-    $ pip install TADLib==0.4.2 coolbox==0.1.7
-
-Finally, NeoLoopFinder can be installed using pip::
-
-    $ pip install neoloop-0.2.0-py3-none-any.whl
+    $ pip install neoloop TADLib==0.4.2 coolbox==0.1.7
 
 Overview
 ========
