@@ -1,0 +1,5 @@
+chr22	chr9	+-	23290555	130731760	translocation
+chr9	chr13	++	131280137	108009063	translocation
+chr13	chr13	+-	93371155	107848624	deletion
+chr9	chr13	+-	131280000	93252000	translocation
+chr22	chr9	++	16819349	131199197	translocation
