@@ -66,6 +66,20 @@ script names:
 
   Search SV assemblies by gene name.
 
+CNV normalization
+=================
+As copy number variations (CNVs) can distort Hi-C signals in cancer cells, we proposed a modified
+matrix balancing algorithm to remove such effects along with other systematic biases including mappability,
+GC content, and restriction fragment sizes. In our implementation, you can perform this CNV normalization by
+sequentially running ``calculate-cnv``, ``segment-cnv``, and ``correct-cnv``. The Hi-C map in
+`.cool <https://github.com/open2c/cooler>`_ format is the only required input to this pipeline, and the
+bias vector returned by this algorithm will be stored in the "sweight" column in the `bins <https://cooler.readthedocs.io/en/latest/datamodel.html#bins>`_
+table of the cool file.
+
+By default, ``assemble-complexSVs``, ``neoloop-caller``, and ``neotad-caller`` will use the "sweight" column to
+normalize the Hi-C matrix. However, you can change this option to ICE normalization by specifying ``--balance-type ICE``.
+
+
 Format of the input SV list
 ===========================
 The input SV file to the command ``assemble-complexSVs`` should contain following 6 columns separated by tab::
@@ -140,7 +154,7 @@ to explore it interactively)::
     In [2]: import cooler
     In [3]: clr = cooler.Cooler('K562-MboI-allReps-hg38.10K.cool')
     In [4]: assembly = 'A0      translocation,22,23290555,+,9,130731760,-       translocation,9,131280137,+,13,108009063,+      deletion,13,107848624,-,13,93371155,+   22,22300000     13,93200000'
-    In [5]: vis = Triangle(clr, assembly, n_rows=3, figsize=(7, 4.2), track_partition=[5, 0.4, 0.5])
+    In [5]: vis = Triangle(clr, assembly, n_rows=3, figsize=(7, 4.2), track_partition=[5, 0.4, 0.5], correct='sweight')
     In [6]: vis.matrix_plot(vmin=0)
     In [7]: vis.plot_chromosome_bounds(linewidth=2.5)
     In [8]: vis.plot_loops('K562.neo-loops.txt', face_color='none', marker_size=40, cluster=True)
