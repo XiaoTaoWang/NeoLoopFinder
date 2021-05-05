@@ -35,8 +35,6 @@ def getargs():
                         help='''Experimental protocol of your Hi-C.''')
     parser.add_argument('--window-size', default=2000000, type=int,
                         help='Window size for calculating DI.')
-    parser.add_argument('--output-model', default='HMM-model.pkl',
-                        help = '''File path to serialize the HMM model.''')
     parser.add_argument('--nproc', default=1, type=int, help='Number of worker processes.')
     parser.add_argument('--logFile', default = 'neotad.log', help = '''Logging file name.''')
 
@@ -89,7 +87,6 @@ def run():
                    '# Weight column = {0}'.format(balance),
                    '# Experimental protocol = {0}'.format(args.protocol),
                    '# Window size = {0}'.format(args.window_size),
-                   '# Serialize model = {0}'.format(args.output_model),
                    '# Number of Processes = {0}'.format(args.nproc),
                    '# Log file name = {0}'.format(args.logFile)
                    ]
@@ -104,11 +101,15 @@ def run():
         protocol = args.protocol
 
         try:
+            '''
             logger.info('Training HMM using reference genome ...')
             G = Genome(args.hic, balance_type=balance, cpu_core=args.nproc)
             model = G.model
-
             joblib.dump(model, 'HMM-model.pkl')
+            '''
+            logger.info('Load the pre-trained HMM model')
+            hmm_folder = os.path.join(os.path.split(neoloop.__file__)[0], 'data')
+            model = joblib.load(os.path.join(hmm_folder, 'HMM-model.pkl'))
 
             # load Hi-C matrix
             clr = cooler.Cooler(args.hic)
