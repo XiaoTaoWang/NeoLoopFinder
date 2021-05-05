@@ -2,7 +2,7 @@
 #cython: boundscheck=False
 #cython: cdivision=True
 
-import itertools, matplotlib
+import itertools, matplotlib, neoloop, os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
@@ -233,12 +233,13 @@ class Triangle(Peakachu):
         self.heatmap_ax.set_xlim(self.hx.min(), self.hx.max())
         self.heatmap_ax.set_ylim(self.hy.min(), self.hy.max())
     
-    def plot_neoTAD(self, hmm, ws=2000000, color='#60636A'):
+    def plot_neoTAD(self, ws=500000, color='#60636A'):
 
         from neoloop.tadtool.core import TADcaller
         import joblib
 
-        hmm = joblib.load(hmm)
+        hmm_folder = os.path.join(os.path.split(neoloop.__file__)[0], 'data')
+        hmm = joblib.load(os.path.join(hmm_folder, 'HMM-model.pkl'))
 
         work = TADcaller(self.matrix, self.res, hmm, window_size=ws)
         work.callDomains()
