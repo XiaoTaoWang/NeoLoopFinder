@@ -22,7 +22,7 @@ or `pip <https://pypi.org/project/pip/>`_::
     $ conda config --add channels conda-forge
     $ conda create -n neoloop python=3.7.1 cython=0.29.13 cooler=0.8.6 numpy=1.17.2 scipy=1.3.1 joblib=0.13.2 scikit-learn=0.20.2 networkx=1.11 pyensembl=1.8.0 matplotlib=3.1.1 pybigwig=0.3.17 pomegranate=0.10.0
     $ conda activate neoloop
-    $ conda install -c r r rpy2 r-mgcv
+    $ conda install -c r r=3.5.1 rpy2=2.9.4 r-mgcv=1.8_23
     $ pip install neoloop TADLib==0.4.2 coolbox==0.1.7
 
 Overview
