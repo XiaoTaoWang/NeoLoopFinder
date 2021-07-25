@@ -3,6 +3,8 @@ Neo-loop Finder
 ***************
 .. image:: https://codeocean.com/codeocean-assets/badge/open-in-code-ocean.svg
    :target: https://codeocean.com/capsule/8407443/tree/v1
+.. image:: https://static.pepy.tech/personalized-badge/neoloop?period=total&units=international_system&left_color=black&right_color=orange&left_text=Downloads
+   :target: https://pepy.tech/project/neoloop
 
 Although recent efforts have shown that structural variations (SVs) can disrupt the 3D genome organization and induce enhancer-hijacking, no computational tools exist to detect such events from chromatin interaction data, such as Hi-C. Here, we develop NeoLoopFinder, a computational framework to identify the chromatin interactions induced by SVs, such as inter-chromosomal translocations, large deletions, and inversions. Our framework can automatically reconstruct local Hi-C maps surrounding the breakpoints, normalize copy number variation and allele effects, and capture local optimal signals. We applied NeoLoopFinder in Hi-C data from 50 cancer cell lines and primary tumors and identified tens of recurrent genes associated with enhancer-hijacking in different cancer types. To validate the algorithm, we deleted hijacked enhancers by CRISPR/Cas9 and showed that the deletions resulted in the reduction of the target oncogene expression. In summary, NeoLoopFinder is a novel tool for identifying potential tumorigenic mechanisms and suggesting new diagnostic and therapeutic targets.
 
