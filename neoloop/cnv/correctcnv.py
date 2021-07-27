@@ -4,7 +4,7 @@
 
 import logging, warnings, h5py
 import numpy as np
-from cooler import ice, util
+from cooler import ice, util, Cooler
 from collections import defaultdict
 
 # override the original functions
@@ -172,7 +172,7 @@ def matrix_balance(cool_uri, nproc=1, chunksize=int(1e7), mad_max=5,
         if 'sweight' in grp['bins']:
             del grp['bins']['sweight']
     
-    clr = ice.Cooler(cool_uri)
+    clr = Cooler(cool_uri)
     
     try:
         if nproc > 1:
