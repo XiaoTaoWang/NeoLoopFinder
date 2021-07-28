@@ -4,7 +4,7 @@
 
 import logging, warnings, h5py
 import numpy as np
-from cooler import ice, util
+from cooler import balance, util, Cooler
 from collections import defaultdict
 
 # override the original functions
@@ -18,12 +18,12 @@ def _balance_genomewide(bias, cnv, ucnv, clr, spans, filters, map, tol, max_iter
 
     for _ in range(max_iters):
         marg = (
-            ice.split(clr, spans=spans, map=map, use_lock=use_lock)
-                .prepare(ice._init)
+            balance.split(clr, spans=spans, map=map, use_lock=use_lock)
+                .prepare(balance._init)
                 .pipe(filters)
-                .pipe(ice._timesouterproduct, bias)
-                .pipe(ice._marginalize)
-                .reduce(ice.add, np.zeros(n_bins))
+                .pipe(balance._timesouterproduct, bias)
+                .pipe(balance._marginalize)
+                .reduce(balance.add, np.zeros(n_bins))
         )
         
         nzmarg = marg[marg != 0]
@@ -56,7 +56,7 @@ def _balance_genomewide(bias, cnv, ucnv, clr, spans, filters, map, tol, max_iter
     else:
         warnings.warn(
             'Iteration limit reached without convergence.',
-            ice.ConvergenceWarning)
+            balance.ConvergenceWarning)
     
     bias[bias==0] = np.nan
     for uc in ucnv:
@@ -96,7 +96,7 @@ def iterative_correction(clr, chunksize=int(1e7), map=map, tol=1e-5, min_nnz=10,
     # List of pre-marginalization data transformations
     base_filters = []
     if ignore_diags:
-        base_filters.append(ice.partial(ice._zero_diags, ignore_diags))
+        base_filters.append(balance.partial(balance._zero_diags, ignore_diags))
 
     # Initialize the bias weights
     n_bins = clr.info['nbins']
@@ -104,23 +104,23 @@ def iterative_correction(clr, chunksize=int(1e7), map=map, tol=1e-5, min_nnz=10,
 
     # Drop bins with too few nonzeros from bias
     if min_nnz > 0:
-        filters = [ice._binarize] + base_filters
+        filters = [balance._binarize] + base_filters
         marg_nnz = (
-            ice.split(clr, spans=spans, map=map, use_lock=use_lock)
-                .prepare(ice._init)
+            balance.split(clr, spans=spans, map=map, use_lock=use_lock)
+                .prepare(balance._init)
                 .pipe(filters)
-                .pipe(ice._marginalize)
-                .reduce(ice.add, np.zeros(n_bins))
+                .pipe(balance._marginalize)
+                .reduce(balance.add, np.zeros(n_bins))
         )
         bias[marg_nnz < min_nnz] = 0
 
     filters = base_filters
     marg = (
-        ice.split(clr, spans=spans, map=map, use_lock=use_lock)
-            .prepare(ice._init)
+        balance.split(clr, spans=spans, map=map, use_lock=use_lock)
+            .prepare(balance._init)
             .pipe(filters)
-            .pipe(ice._marginalize)
-            .reduce(ice.add, np.zeros(n_bins))
+            .pipe(balance._marginalize)
+            .reduce(balance.add, np.zeros(n_bins))
     )
 
     # Drop bins with too few total counts from bias
@@ -135,7 +135,7 @@ def iterative_correction(clr, chunksize=int(1e7), map=map, tol=1e-5, min_nnz=10,
             marg[lo:hi] /= np.median(c_marg[c_marg > 0])
         logNzMarg = np.log(marg[marg>0])
         med_logNzMarg = np.median(logNzMarg)
-        dev_logNzMarg = ice.mad(logNzMarg)
+        dev_logNzMarg = balance.mad(logNzMarg)
         cutoff = np.exp(med_logNzMarg - mad_max * dev_logNzMarg)
         bias[marg < cutoff] = 0
     
@@ -172,11 +172,11 @@ def matrix_balance(cool_uri, nproc=1, chunksize=int(1e7), mad_max=5,
         if 'sweight' in grp['bins']:
             del grp['bins']['sweight']
     
-    clr = ice.Cooler(cool_uri)
+    clr = Cooler(cool_uri)
     
     try:
         if nproc > 1:
-            pool = ice.Pool(nproc)
+            pool = balance.Pool(nproc)
             map_ = pool.imap_unordered
         else:
             map_ = map

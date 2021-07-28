@@ -3,7 +3,7 @@
 #cython: cdivision=True
 
 import os, cooler, pyBigWig
-from cooler import ice
+from cooler import balance
 import numpy as np
 import pandas as pd
 from collections import Counter
@@ -13,7 +13,7 @@ def get_marginals(uri, exclude=['M', 'Y', 'MT'], chunksize=int(1e7), nproc=1):
     clr = cooler.Cooler(uri)
 
     if nproc > 1:
-        pool = ice.Pool(nproc)
+        pool = balance.Pool(nproc)
         map_ = pool.imap_unordered
     else:
         map_ = map
@@ -24,11 +24,11 @@ def get_marginals(uri, exclude=['M', 'Y', 'MT'], chunksize=int(1e7), nproc=1):
     spans = list(zip(edges[:-1], edges[1:]))
 
     marg = (
-        ice.split(clr, spans=spans, map=map_, use_lock=False)
-            .prepare(ice._init)
+        balance.split(clr, spans=spans, map=map_, use_lock=False)
+            .prepare(balance._init)
             .pipe([])
-            .pipe(ice._marginalize)
-            .reduce(ice.add, np.zeros(n_bins))
+            .pipe(balance._marginalize)
+            .reduce(balance.add, np.zeros(n_bins))
     )
     table = clr.bins()[:][['chrom', 'start', 'end']]
     table['Coverage'] = marg.astype(int)
