@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import cooler, sys
 
 in_cool = sys.argv[1]
