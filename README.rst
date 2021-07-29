@@ -177,7 +177,7 @@ Gallery
 =======
 In addtion to the reconstructed Hi-C maps (.cool), loops (.bedpe), and genes, the visualization module also supports plotting
 RNA-Seq/ChIP-Seq/ATAC-Seq signals (.bigwig), peaks (.bed), and motifs (.bed). Below I'm going to share more examples and the
-code snippets used to generate the figure:
+code snippets used to generate the figure.
 
 .. image:: ./images/SCaBER.NFIB.png
         :align: center
@@ -211,7 +211,7 @@ track (**track_partition**) can all be configured flexibly.
     vis.plot_chromosome_bounds(linewidth=2)
     vis.plot_genes(filter_=['ETV1', 'DGKB', 'MIPOL1'],label_aligns={'DGKB':'right', 'ETV1':'right'}, fontsize=10) 
     vis.plot_signal('DNase-Seq', 'LNCaP.DNase2.hg38.bw', label_size=10, data_range_size=9, max_value=1.8, color='#6A3D9A')
-    vis.plot_motif('LNCaP.CTCF-motifs.hg38.txt', subset='+') # an example file LNCaP.CTCF-motifs.hg38.txt can be found at the demo folder of this repository
-    vis.plot_motif('LNCaP.CTCF-motifs.hg38.txt', subset='-')
+    vis.plot_motif('demo/LNCaP.CTCF-motifs.hg38.txt', subset='+') # an example file LNCaP.CTCF-motifs.hg38.txt can be found at the demo folder of this repository
+    vis.plot_motif('demo/LNCaP.CTCF-motifs.hg38.txt', subset='-')
     vis.plot_chromosome_bar(name_size=13, coord_size=10, color_by_order=['#1F78B4','#33A02C'])
     vis.outfig('LNCaP.CTCF-motifs.png', dpi=300)
