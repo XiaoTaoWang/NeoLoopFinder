@@ -81,8 +81,7 @@ table of the cool file.
 By default, ``assemble-complexSVs``, ``neoloop-caller``, and ``neotad-caller`` will use the "sweight" column to
 normalize the Hi-C matrix. However, you can change this option to ICE normalization by specifying ``--balance-type ICE``.
 
-.. note:: if your .cool files were transformed from .hic files, please make sure to add the "chr" prefix to your cool files using `add_prefix_to_cool.py <https://raw.githubusercontent.com/XiaoTaoWang/NeoLoopFinder/master/scripts/add_prefix_to_cool.py>`_
-before your run ``calculate-cnv`` (`issue #1 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/1>`_). Also make sure you have
+.. note:: if your .cool files were transformed from .hic files, please make sure to add the "chr" prefix to your cool files using `add_prefix_to_cool.py <https://raw.githubusercontent.com/XiaoTaoWang/NeoLoopFinder/master/scripts/add_prefix_to_cool.py>`_ before your run ``calculate-cnv`` (`issue #1 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/1>`_). Also make sure you have
 run ``cooler balance`` on your cool files before ``correct-cnv`` (`issue #8 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/8>`_).
 
 
