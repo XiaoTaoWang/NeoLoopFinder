@@ -220,3 +220,26 @@ Figure output 2:
 
 .. image:: ./images/LNCaP.CTCF-motifs.png
         :align: center
+
+Code Snippet 3:
+
+    >>> from neoloop.visualize.core import * 
+    >>> import cooler
+    >>> clr = cooler.Cooler('LNCaP-WT-Arima-allReps-filtered.mcool::resolutions/10000')
+    >>> assembly = 'C26     translocation,7,14158275,+,14,37516423,+        7,13140000      14,36390000'
+    >>> vis = Triangle(clr, assembly, n_rows=5, figsize=(7, 5.3), track_partition=[5, 0.4, 0.8, 0.8, 0.5], correct='weight', span=600000, space=0.03)
+    >>> vis.matrix_plot(vmin=0, cbr_fontsize=9)
+    >>> vis.plot_chromosome_bounds(linewidth=2)
+    >>> vis.plot_loops('LNCaP.neoloops.txt', face_color='none', marker_size=40, cluster=True, onlyneo=True) # only show neo-loops
+    >>> vis.plot_genes(filter_=['ETV1', 'DGKB', 'MIPOL1'],label_aligns={'DGKB':'right', 'ETV1':'right'}, fontsize=10)
+    >>> vis.plot_signal('DNase-Seq', 'LNCaP.DNase2.hg38.bw', label_size=10, data_range_size=9, max_value=1.8, color='#6A3D9A')
+    >>> vis.plot_arcs(lw=1.5, cutoff='top', gene_filter=['ETV1'], arc_color='#666666') # ETV1-related neo-loops
+    >>> vis.plot_chromosome_bar(name_size=13, coord_size=10, color_by_order=['#1F78B4','#33A02C'])
+    >>> vis.outfig('LNCaP.arcs.png', dpi=300)
+
+Figure output 3:
+
+.. image:: ./images/LNCaP.arcs.png
+        :align: center
+
+Note that both **plot_loops** and **plot_genes** need to be called before **plot_arcs**.
