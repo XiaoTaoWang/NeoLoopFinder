@@ -81,6 +81,11 @@ table of the cool file.
 By default, ``assemble-complexSVs``, ``neoloop-caller``, and ``neotad-caller`` will use the "sweight" column to
 normalize the Hi-C matrix. However, you can change this option to ICE normalization by specifying ``--balance-type ICE``.
 
+.. note:: if your .cool files were transformed from .hic files, please make sure to add the "chr" prefix to your
+cool files using `add_prefix_to_cool.py <https://raw.githubusercontent.com/XiaoTaoWang/NeoLoopFinder/master/scripts/add_prefix_to_cool.py>`_
+before your run ``calculate-cnv`` (`issue #1 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/1>`_).
+Also make sure you have run ``cooler balance`` on your cool files before ``correct-cnv`` (`issue #8 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/8>`_).
+
 
 Format of the input SV list
 ===========================
@@ -166,3 +171,47 @@ to explore it interactively)::
 
 .. image:: ./images/fig1b.png
         :align: center
+
+
+Gallery
+=======
+In addtion to the reconstructed Hi-C maps (.cool), loops (.bedpe), and genes, the visualization module also supports plotting
+RNA-Seq/ChIP-Seq/ATAC-Seq signals (.bigwig), peaks (.bed), and motifs (.bed). Below I'm going to share more examples and the
+code snippets used to generate the figure:
+
+.. image:: ./images/SCaBER.NFIB.png
+        :align: center
+
+    from neoloop.visualize.core import * 
+    import cooler
+    clr = cooler.Cooler('SCABER-Arima-allReps.10K.cool')
+    List = [line.rstrip() for line in open('demo/allOnco-genes.txt')] # please find allOnco-genes.txt in the demo folder of this repository
+    assembly = 'A3      deletion,9,38180000,-,9,14660000,+      inversion,9,13870000,-,9,22260000,-     9,38480000      9,24220000'
+    vis = Triangle(clr, assembly, n_rows=5, figsize=(7, 5.2), track_partition=[5, 0.8, 0.8, 0.2, 0.5], correct='weight', span=300000, space=0.08)
+    vis.matrix_plot(vmin=0, cbr_fontsize=9)
+    vis.plot_chromosome_bounds(linewidth=2)
+    vis.plot_signal('RNA-Seq', 'enc_SCABER_RNASeq_rep1.bw', label_size=10, data_range_size=9, max_value=0.5, color='#E31A1C')
+    vis.plot_signal('H3K27ac', 'SCABER_H3K27ac_pool.bw', label_size=10, data_range_size=9, max_value=20, color='#6A3D9A')
+    vis.plot_genes(release=75, filter_=List, fontsize=10)
+    vis.plot_chromosome_bar(name_size=13, coord_size=10)
+    vis.outfig('SCaBER.NFIB.png', dpi=300)
+
+Note that when you initialize a plotting object, the figure size (**figsize**), the number of tracks (**n_rows**), and the height of each
+track (**track_partition**) can all be configured flexibly.
+
+.. image:: ./images/LNCaP.CTCF-motifs.png
+        :align: center
+
+    from neoloop.visualize.core import * 
+    import cooler
+    clr = cooler.Cooler('LNCaP-WT-Arima-allReps-filtered.mcool::resolutions/10000')
+    assembly = 'C26     translocation,7,14158275,+,14,37516423,+        7,13140000      14,36390000'
+    vis = Triangle(clr, assembly, n_rows=6, figsize=(7, 5.3), track_partition=[5, 0.4, 0.8, 0.3, 0.3, 0.5], correct='weight', span=600000, space=0.03)
+    vis.matrix_plot(vmin=0, cbr_fontsize=9)
+    vis.plot_chromosome_bounds(linewidth=2)
+    vis.plot_genes(filter_=['ETV1', 'DGKB', 'MIPOL1'],label_aligns={'DGKB':'right', 'ETV1':'right'}, fontsize=10) 
+    vis.plot_signal('DNase-Seq', 'LNCaP.DNase2.hg38.bw', label_size=10, data_range_size=9, max_value=1.8, color='#6A3D9A')
+    vis.plot_motif('LNCaP.CTCF-motifs.hg38.txt', subset='+') # an example file LNCaP.CTCF-motifs.hg38.txt can be found at the demo folder of this repository
+    vis.plot_motif('LNCaP.CTCF-motifs.hg38.txt', subset='-')
+    vis.plot_chromosome_bar(name_size=13, coord_size=10, color_by_order=['#1F78B4','#33A02C'])
+    vis.outfig('LNCaP.CTCF-motifs.png', dpi=300)
