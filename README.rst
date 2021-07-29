@@ -181,19 +181,19 @@ code snippets used to generate the figure.
 
 Code Snippet 1:
 
-    from neoloop.visualize.core import * 
-    import cooler
-    clr = cooler.Cooler('SCABER-Arima-allReps.10K.cool')
-    List = [line.rstrip() for line in open('demo/allOnco-genes.txt')] # please find allOnco-genes.txt in the demo folder of this repository
-    assembly = 'A3      deletion,9,38180000,-,9,14660000,+      inversion,9,13870000,-,9,22260000,-     9,38480000      9,24220000'
-    vis = Triangle(clr, assembly, n_rows=5, figsize=(7, 5.2), track_partition=[5, 0.8, 0.8, 0.2, 0.5], correct='weight', span=300000, space=0.08)
-    vis.matrix_plot(vmin=0, cbr_fontsize=9)
-    vis.plot_chromosome_bounds(linewidth=2)
-    vis.plot_signal('RNA-Seq', 'enc_SCABER_RNASeq_rep1.bw', label_size=10, data_range_size=9, max_value=0.5, color='#E31A1C')
-    vis.plot_signal('H3K27ac', 'SCABER_H3K27ac_pool.bw', label_size=10, data_range_size=9, max_value=20, color='#6A3D9A')
-    vis.plot_genes(release=75, filter_=List, fontsize=10)
-    vis.plot_chromosome_bar(name_size=13, coord_size=10)
-    vis.outfig('SCaBER.NFIB.png', dpi=300)
+    >>> from neoloop.visualize.core import * 
+    >>> import cooler
+    >>> clr = cooler.Cooler('SCABER-Arima-allReps.10K.cool')
+    >>> List = [line.rstrip() for line in open('demo/allOnco-genes.txt')] # please find allOnco-genes.txt in the demo folder of this repository
+    >>> assembly = 'A3      deletion,9,38180000,-,9,14660000,+      inversion,9,13870000,-,9,22260000,-     9,38480000      9,24220000'
+    >>> vis = Triangle(clr, assembly, n_rows=5, figsize=(7, 5.2), track_partition=[5, 0.8, 0.8, 0.2, 0.5], correct='weight', span=300000, space=0.08)
+    >>> vis.matrix_plot(vmin=0, cbr_fontsize=9)
+    >>> vis.plot_chromosome_bounds(linewidth=2)
+    >>> vis.plot_signal('RNA-Seq', 'enc_SCABER_RNASeq_rep1.bw', label_size=10, data_range_size=9, max_value=0.5, color='#E31A1C')
+    >>> vis.plot_signal('H3K27ac', 'SCABER_H3K27ac_pool.bw', label_size=10, data_range_size=9, max_value=20, color='#6A3D9A')
+    >>> vis.plot_genes(release=75, filter_=List, fontsize=10)
+    >>> vis.plot_chromosome_bar(name_size=13, coord_size=10)
+    >>> vis.outfig('SCaBER.NFIB.png', dpi=300)
 
 Figure output 1:
 
@@ -205,19 +205,19 @@ track (**track_partition**) can all be configured flexibly.
 
 Code Snippet 2:
 
-    from neoloop.visualize.core import * 
-    import cooler
-    clr = cooler.Cooler('LNCaP-WT-Arima-allReps-filtered.mcool::resolutions/10000')
-    assembly = 'C26     translocation,7,14158275,+,14,37516423,+        7,13140000      14,36390000'
-    vis = Triangle(clr, assembly, n_rows=6, figsize=(7, 5.3), track_partition=[5, 0.4, 0.8, 0.3, 0.3, 0.5], correct='weight', span=600000, space=0.03)
-    vis.matrix_plot(vmin=0, cbr_fontsize=9)
-    vis.plot_chromosome_bounds(linewidth=2)
-    vis.plot_genes(filter_=['ETV1', 'DGKB', 'MIPOL1'],label_aligns={'DGKB':'right', 'ETV1':'right'}, fontsize=10) 
-    vis.plot_signal('DNase-Seq', 'LNCaP.DNase2.hg38.bw', label_size=10, data_range_size=9, max_value=1.8, color='#6A3D9A')
-    vis.plot_motif('demo/LNCaP.CTCF-motifs.hg38.txt', subset='+') # an example file LNCaP.CTCF-motifs.hg38.txt can be found at the demo folder of this repository
-    vis.plot_motif('demo/LNCaP.CTCF-motifs.hg38.txt', subset='-')
-    vis.plot_chromosome_bar(name_size=13, coord_size=10, color_by_order=['#1F78B4','#33A02C'])
-    vis.outfig('LNCaP.CTCF-motifs.png', dpi=300)
+    >>> from neoloop.visualize.core import * 
+    >>> import cooler
+    >>> clr = cooler.Cooler('LNCaP-WT-Arima-allReps-filtered.mcool::resolutions/10000')
+    >>> assembly = 'C26     translocation,7,14158275,+,14,37516423,+        7,13140000      14,36390000'
+    >>> vis = Triangle(clr, assembly, n_rows=6, figsize=(7, 5.3), track_partition=[5, 0.4, 0.8, 0.3, 0.3, 0.5], correct='weight', span=600000, space=0.03)
+    >>> vis.matrix_plot(vmin=0, cbr_fontsize=9)
+    >>> vis.plot_chromosome_bounds(linewidth=2)
+    >>> vis.plot_genes(filter_=['ETV1', 'DGKB', 'MIPOL1'],label_aligns={'DGKB':'right', 'ETV1':'right'}, fontsize=10) 
+    >>> vis.plot_signal('DNase-Seq', 'LNCaP.DNase2.hg38.bw', label_size=10, data_range_size=9, max_value=1.8, color='#6A3D9A')
+    >>> vis.plot_motif('demo/LNCaP.CTCF-motifs.hg38.txt', subset='+') # an example file LNCaP.CTCF-motifs.hg38.txt can be found at the demo folder of this repository
+    >>> vis.plot_motif('demo/LNCaP.CTCF-motifs.hg38.txt', subset='-')
+    >>> vis.plot_chromosome_bar(name_size=13, coord_size=10, color_by_order=['#1F78B4','#33A02C'])
+    >>> vis.outfig('LNCaP.CTCF-motifs.png', dpi=300)
 
 Figure output 2:
 
