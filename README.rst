@@ -179,8 +179,7 @@ In addtion to the reconstructed Hi-C maps (.cool), loops (.bedpe), and genes, th
 RNA-Seq/ChIP-Seq/ATAC-Seq signals (.bigwig), peaks (.bed), and motifs (.bed). Below I'm going to share more examples and the
 code snippets used to generate the figure.
 
-.. image:: ./images/SCaBER.NFIB.png
-        :align: center
+Code Snippet 1:
 
     from neoloop.visualize.core import * 
     import cooler
@@ -196,11 +195,15 @@ code snippets used to generate the figure.
     vis.plot_chromosome_bar(name_size=13, coord_size=10)
     vis.outfig('SCaBER.NFIB.png', dpi=300)
 
+Figure output 1:
+
+.. image:: ./images/SCaBER.NFIB.png
+        :align: center
+
 Note that when you initialize a plotting object, the figure size (**figsize**), the number of tracks (**n_rows**), and the height of each
 track (**track_partition**) can all be configured flexibly.
 
-.. image:: ./images/LNCaP.CTCF-motifs.png
-        :align: center
+Code Snippet 2:
 
     from neoloop.visualize.core import * 
     import cooler
@@ -215,3 +218,8 @@ track (**track_partition**) can all be configured flexibly.
     vis.plot_motif('demo/LNCaP.CTCF-motifs.hg38.txt', subset='-')
     vis.plot_chromosome_bar(name_size=13, coord_size=10, color_by_order=['#1F78B4','#33A02C'])
     vis.outfig('LNCaP.CTCF-motifs.png', dpi=300)
+
+Figure output 2:
+
+.. image:: ./images/LNCaP.CTCF-motifs.png
+        :align: center
