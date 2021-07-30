@@ -151,20 +151,19 @@ is a neo-loop. For example, for the 1st row above, the loop was detected on the 
 distance between the two anchors on this assembly is 130K (note that the distance on the reference genome is >14Mb),
 and it is a neo-loop as indicated by "1".
 
-Finally, let's reproduce the figure 1b using the python code below (we recommend using `ipython <https://ipython.org/>`_
-to explore it interactively)::
+Finally, let's reproduce the `figure 1b <https://doi.org/10.1038/s41592-021-01164-w>`_ using the python code below:
 
-    In [1]: from neoloop.visualize.core import * 
-    In [2]: import cooler
-    In [3]: clr = cooler.Cooler('K562-MboI-allReps-hg38.10K.cool')
-    In [4]: assembly = 'A0      translocation,22,23290555,+,9,130731760,-       translocation,9,131280137,+,13,108009063,+      deletion,13,107848624,-,13,93371155,+   22,22300000     13,93200000'
-    In [5]: vis = Triangle(clr, assembly, n_rows=3, figsize=(7, 4.2), track_partition=[5, 0.4, 0.5], correct='sweight')
-    In [6]: vis.matrix_plot(vmin=0)
-    In [7]: vis.plot_chromosome_bounds(linewidth=2.5)
-    In [8]: vis.plot_loops('K562.neo-loops.txt', face_color='none', marker_size=40, cluster=True)
-    In [9]: vis.plot_genes(filter_=['PRAME','BCRP4', 'RAB36', 'BCR', 'ABL1', 'NUP214'],label_aligns={'PRAME':'right','RAB36':'right'}, fontsize=9) 
-    In [10]: vis.plot_chromosome_bar(name_size=11, coord_size=4.8)
-    In [11]: vis.outfig('K562.A0.pdf')
+    >>> from neoloop.visualize.core import * 
+    >>> import cooler
+    >>> clr = cooler.Cooler('K562-MboI-allReps-hg38.10K.cool')
+    >>> assembly = 'A0      translocation,22,23290555,+,9,130731760,-       translocation,9,131280137,+,13,108009063,+      deletion,13,107848624,-,13,93371155,+   22,22300000     13,93200000'
+    >>> vis = Triangle(clr, assembly, n_rows=3, figsize=(7, 4.2), track_partition=[5, 0.4, 0.5], correct='sweight')
+    >>> vis.matrix_plot(vmin=0)
+    >>> vis.plot_chromosome_bounds(linewidth=2.5)
+    >>> vis.plot_loops('K562.neo-loops.txt', face_color='none', marker_size=40, cluster=True)
+    >>> vis.plot_genes(filter_=['PRAME','BCRP4', 'RAB36', 'BCR', 'ABL1', 'NUP214'],label_aligns={'PRAME':'right','RAB36':'right'}, fontsize=9) 
+    >>> vis.plot_chromosome_bar(name_size=11, coord_size=4.8)
+    >>> vis.outfig('K562.A0.pdf')
 
 .. image:: ./images/fig1b.png
         :align: center
