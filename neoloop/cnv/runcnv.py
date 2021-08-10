@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from collections import Counter
 
-def get_marginals(uri, exclude=['M', 'Y', 'MT'], chunksize=int(1e7), nproc=1):
+def get_marginals(uri, exclude=['M', 'Y', 'MT', 'EBV'], chunksize=int(1e7), nproc=1):
 
     clr = cooler.Cooler(uri)
 
