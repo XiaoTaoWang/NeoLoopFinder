@@ -103,7 +103,9 @@ def run():
             'hg38.DpnII.npz': 'https://northwestern.box.com/shared/static/327yesejbjdtqm2trchrp8olx4t1gnky',
             'hg19.DpnII.npz': 'https://northwestern.box.com/shared/static/dqwqbbqbpbtn9sw41skm8368nplp9alt',
             'hg19.BglII.npz': 'https://northwestern.box.com/shared/static/8yzq8c9pxr8xrhulbh04lc9ek634cvhv',
-            'hg38.BglII.npz': 'https://northwestern.box.com/shared/static/2hvlpsxumtc934cib8lze65wxoxwkj3b'
+            'hg38.BglII.npz': 'https://northwestern.box.com/shared/static/2hvlpsxumtc934cib8lze65wxoxwkj3b',
+            'hg38.uniform.npz': 'https://northwestern.box.com/s/071ep0e69zdama7ar37v03g2fewfvxu7',
+            'hg19.uniform.npz': 'https://northwestern.box.com/s/f9k6thrjh7es1tyoxtwaugctdtvxsi6c'
         }
 
         cachefolder = os.path.abspath(os.path.expanduser(args.cachefolder))
