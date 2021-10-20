@@ -183,10 +183,11 @@ class Triangle(Peakachu):
             vmin = M[np.nonzero(M)].min()
             vmax = M.max()
             sc = h_ax.pcolormesh(x, y, np.flipud(M), cmap=cmap,
-                        edgecolor='none', snap=True, linewidth=.001, norm=LogNorm(vmin, vmax))
+                        edgecolor='none', snap=True, linewidth=.001,
+                        norm=LogNorm(vmin, vmax), rasterized=True)
         else:
             sc = h_ax.pcolormesh(x, y, np.flipud(M), vmin=vmin, vmax=vmax, cmap=cmap,
-                        edgecolor='none', snap=True, linewidth=.001)
+                        edgecolor='none', snap=True, linewidth=.001, rasterized=True)
         
         h_ax.axis('off')
         self.heatmap_ax = h_ax

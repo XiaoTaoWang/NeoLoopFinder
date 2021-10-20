@@ -32,8 +32,9 @@ def getargs():
                         help = '''The extended genomic span of SV break points.(bp)''')
     parser.add_argument('--balance-type', default='CNV', choices=['CNV', 'ICE', 'Raw'],
                         help = 'Normalization method.')
-    parser.add_argument('--protocol', default='insitu', choices=['insitu', 'dilution'],
-                        help='''Experimental protocol of your Hi-C.''')
+    parser.add_argument('--protocol', default='insitu', choices=['insitu', 'dilution', 'chiapet-pol2', 'chiapet-ctcf'],
+                        help='''Experimental type of your contact matrices. insitu: insitu Hi-C; dilution: dilution Hi-C
+                        chiapet-pol2: RNAPII ChIA-PET; chiapet-ctcf: CTCF ChIA-PET.''')
     parser.add_argument('--prob', type=float, default=0.9,
                         help = 'Probability threshold.')
     parser.add_argument('--no-clustering', action = 'store_true',
@@ -104,8 +105,10 @@ def run():
         no_pool = args.no_clustering
         if args.balance_type == 'CNV':
             balance = 'sweight'
-        else:
+        elif args.balance_type == 'ICE':
             balance = 'weight'
+        else:
+            balance = False
 
         try:
             # load Hi-C matrix
@@ -171,7 +174,7 @@ def pipeline(clr, index, assemblies, rsize, balance, protocol, prob, mmp, nopool
     fu.correct_heterozygosity()
     fu.remove_gaps()
 
-    core = Peakachu(fu.gap_free, lower=50000, upper=3000000, res=fu.res, protocol=protocol)
+    core = Peakachu(fu.gap_free, lower=6*fu.res, upper=3000000, res=fu.res, protocol=protocol)
     loop_index = core.predict(thre=prob, no_pool=nopool, min_count=mmp, index_map=fu.index_map,
                             chains=fu.chains)
         

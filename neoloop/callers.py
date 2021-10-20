@@ -4,7 +4,7 @@ Created on Wed Jun 27 18:48:42 2018
 @author: XiaoTao Wang
 """
 
-import pickle, logging, neoloop, os, joblib, math
+import logging, neoloop, os, joblib, math
 import numpy as np
 from scipy import sparse, stats
 from scipy.stats import poisson
@@ -99,18 +99,23 @@ class Fusion(object):
             50000: os.path.join(data_folder, 'gm.dilution.expected.50k.pkl')
         },
         'insitu':{
-            5000: os.path.join(data_folder, 'gm.insitu.expected.5k.pkl'),
+            5000: os.path.join(data_folder, 'gm-300m.insitu.expected.5k.pkl'),
             10000: os.path.join(data_folder, 'gm.insitu.expected.10k.pkl'),
             20000: os.path.join(data_folder, 'gm.insitu.expected.20k.pkl'),
             25000: os.path.join(data_folder, 'gm.insitu.expected.25k.pkl')
+        },
+        'chiapet-pol2':{
+            5000: os.path.join(data_folder, 'chiapet.mcf7.pol2.expected.5k.pkl')
+        },
+        'chiapet-ctcf':{
+            5000: os.path.join(data_folder, 'chiapet.mcf7.ctcf.expected.5k.pkl')
         }
         }
         
         self.expected = {}
         if self.protocol in paths:
             if self.res in paths[self.protocol]:
-                with open(paths[self.protocol][self.res], 'rb') as source:
-                    self.expected = pickle.load(source)
+                self.expected = joblib.load(paths[self.protocol][self.res])
          
 
     def get_matrix(self, span, col, trim):
@@ -567,8 +572,20 @@ class Peakachu():
                     'h3k27ac': os.path.join(data_folder, 'insitu.h3k27ac.25k.pkl')
                 },
                 5000: {
-                    'ctcf': os.path.join(data_folder, 'insitu.h3k27ac.5k.pkl'),
-                    'h3k27ac': os.path.join(data_folder, 'insitu.h3k27ac.5k.pkl'),
+                    'ctcf': os.path.join(data_folder, 'insitu.per7.5.h3k27ac.5k.pkl'),
+                    'h3k27ac': os.path.join(data_folder, 'insitu.per7.5.h3k27ac.5k.pkl'),
+                }
+            },
+            'chiapet-pol2': {
+                5000: {
+                    'ctcf': os.path.join(data_folder, 'chiapet.mcf7.pol2.5k.pkl'),
+                    'h3k27ac': os.path.join(data_folder, 'chiapet.mcf7.pol2.5k.pkl'),
+                }
+            },
+            'chiapet-ctcf': {
+                5000: {
+                    'ctcf': os.path.join(data_folder, 'chiapet.mcf7.ctcf.5k.pkl'),
+                    'h3k27ac': os.path.join(data_folder, 'chiapet.mcf7.ctcf.5k.pkl'),
                 }
             }
         }
@@ -599,7 +616,10 @@ class Peakachu():
                 continue
             p2LL = center / np.mean(window[ls-1-ls//4:ls, :1+ls//4])
             ranks = stats.rankdata(window, method='ordinal')
-            window = np.r_[window.ravel(), ranks, p2LL]
+            if self.protocol in ['chiapet-pol2', 'chiapet-ctcf']:
+                window = np.r_[window.ravel(), ranks]
+            else:
+                window = np.r_[window.ravel(), ranks, p2LL]
             fea.append(window)
             clist.append((x, y))
         
