@@ -24,8 +24,10 @@ def getargs():
     parser.add_argument('-H', '--hic', help='''Cool URI.''')
     parser.add_argument('-g', '--genome', default='hg38', choices = ['hg19', 'hg38'],
                        help='''Reference genome name.''')
-    parser.add_argument('-e', '--enzyme', default='MboI', choices = ['HindIII', 'MboI', 'DpnII', 'Arima', 'BglII'],
-                        help='''The restriction enzyme name used in the Hi-C experiment.''')
+    parser.add_argument('-e', '--enzyme', default='MboI', choices = ['HindIII', 'MboI', 'DpnII', 'Arima', 'BglII', 'uniform'],
+                        help='''The restriction enzyme name used in the Hi-C experiment. If the genome
+                        was cutted using a sequence-independent/uniform-cutting enzyme, please consider
+                        setting this parameter to "uniform".''')
     parser.add_argument('--output', help='''Output file path.''')
 
     parser.add_argument('--cachefolder', help='''Cache folder. We suggest keep this setting the same

@@ -6,7 +6,7 @@ Created on Wed Jun 27 16:43:14 2018
 
 """
 __author__ = 'XiaoTao Wang'
-__version__ = '0.2.3-r3'
+__version__ = '0.2.4'
 __license__ = 'GPLv3+'
 
 Me = __file__
