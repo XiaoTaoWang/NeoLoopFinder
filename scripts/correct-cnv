@@ -27,6 +27,16 @@ def getargs():
     # Algorithm
     parser.add_argument('--cnv-file',
                         help='''Copy number segmentation in bedGraph format.''')
+    parser.add_argument('--mad-max', default=5, type=float, help='''Ignore bins from the
+                        contact matrix using the 'MAD-max' filter. Increase the value of this
+                        parameter to include more bins to be considered in matrix balancing.
+                        Setting this parameter to 0 will ignore the 'MAD-max' filter.''')
+    parser.add_argument('--min-nnz', default=10, type=int, help='''Ignore bins from the
+                        contact matrix whose marginal number of nonzeros is less than
+                        this number.''')
+    parser.add_argument('--ignore-diags', default=1, type=int, help='''Number of diagonals
+                        of the contact matrix to ignore. For example, 0 ignores nothing,
+                        1 ignores the main diagonal, and 2 ignores diagonals (-1, 0, 1).''')
     parser.add_argument('--nproc', default=1, type=int, help='Number of worker processes.')
     parser.add_argument('-f', '--force', action = 'store_true',
                         help = '''When specified, overwrite the target bias vector, "sweight",
@@ -73,6 +83,9 @@ def run():
         arglist = ['# ARGUMENT LIST:',
                    '# Cooler URI = {0}'.format(args.hic),
                    '# CNV Profile = {0}'.format(args.cnv_file),
+                   '# MAD-MAX = {0}'.format(args.mad_max),
+                   '# Minimum Nonzeros = {0}'.format(args.min_nnz),
+                   '# Number of Diagonals to Ignore = {0}'.format(args.ignore_diags),
                    '# Number of Processes = {0}'.format(args.nproc),
                    '# Log file name = {0}'.format(args.logFile)
                    ]
@@ -91,7 +104,8 @@ def run():
                 bincnv = binCNV(args.cnv_file, hic_pool.binsize)
                 bincnv.assign_cnv(args.hic)
                 logger.info('Perform CNV-separate matrix balancing ...')
-                matrix_balance(args.hic, nproc=args.nproc)
+                matrix_balance(args.hic, nproc=args.nproc, mad_max=args.mad_max, min_nnz=args.min_nnz,
+                               ignore_diags=args.ignore_diags)
             else:
                 logger.info('sweight column already exists, skip')
             
