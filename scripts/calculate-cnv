@@ -90,22 +90,22 @@ def run():
         from rpy2.robjects.packages import importr
 
         weblinks = {
-            'hg38_mappability_50mer.bw': 'https://northwestern.box.com/shared/static/2o3f0igsmvux88at4ha2ln07vhguc3y4',
-            'hg38.MboI.npz': 'https://northwestern.box.com/shared/static/327yesejbjdtqm2trchrp8olx4t1gnky',
-            'hg38.Arima.npz': 'https://northwestern.box.com/shared/static/nmp0sw63ocmpfka8d46v88etn2yapf61',
-            'hg38_1kb_GCPercent.bw': 'https://northwestern.box.com/shared/static/4foe28nu59c82u06ftp9xk1s3ghwunob',
-            'hg38.HindIII.npz': 'https://northwestern.box.com/shared/static/gq44b2yea6lcjfren8777mp5nfjkqdk5',
-            'hg19_mappability_50mer.bw': 'https://northwestern.box.com/shared/static/kxk1dtrn6pbfxlv8jpaegby7rnoo2mmj',
-            'hg19.MboI.npz': 'https://northwestern.box.com/shared/static/dqwqbbqbpbtn9sw41skm8368nplp9alt',
-            'hg19.Arima.npz': 'https://northwestern.box.com/shared/static/wee12ew54s4jjbazkv3n0956z9e0qqkc',
-            'hg19_1kb_GCPercent.bw': 'https://northwestern.box.com/shared/static/8j0naiksi9npnrpwfghgc772hx8qf48w',
-            'hg19.HindIII.npz': 'https://northwestern.box.com/shared/static/2skfy52qxt5x6uf97f8nvztj3t7gemgl',
-            'hg38.DpnII.npz': 'https://northwestern.box.com/shared/static/327yesejbjdtqm2trchrp8olx4t1gnky',
-            'hg19.DpnII.npz': 'https://northwestern.box.com/shared/static/dqwqbbqbpbtn9sw41skm8368nplp9alt',
-            'hg19.BglII.npz': 'https://northwestern.box.com/shared/static/8yzq8c9pxr8xrhulbh04lc9ek634cvhv',
-            'hg38.BglII.npz': 'https://northwestern.box.com/shared/static/2hvlpsxumtc934cib8lze65wxoxwkj3b',
-            'hg38.uniform.npz': 'https://northwestern.box.com/shared/static/071ep0e69zdama7ar37v03g2fewfvxu7',
-            'hg19.uniform.npz': 'https://northwestern.box.com/shared/static/f9k6thrjh7es1tyoxtwaugctdtvxsi6c'
+            'hg38_mappability_50mer.bw': 'https://www.dropbox.com/s/gjil3ggpwfm9wjq/hg38_mappability_50mer.bw?dl=0',
+            'hg38.MboI.npz': 'https://www.dropbox.com/s/ao2bhtm1ywu8xh7/hg38.MboI.npz?dl=0',
+            'hg38.Arima.npz': 'https://www.dropbox.com/s/4ic7qfdns8wb9fk/hg38.Arima.npz?dl=0',
+            'hg38_1kb_GCPercent.bw': 'https://www.dropbox.com/s/o53g7wf6nbk74uk/hg38_1kb_GCPercent.bw?dl=0',
+            'hg38.HindIII.npz': 'https://www.dropbox.com/s/a7ispnvihu5kid7/hg38.HindIII.npz?dl=0',
+            'hg19_mappability_50mer.bw': 'https://www.dropbox.com/s/bsih12613ko4rf9/hg19_mappability_50mer.bw?dl=0',
+            'hg19.MboI.npz': 'https://www.dropbox.com/s/ri79752kfleuflo/hg19.MboI.npz?dl=0',
+            'hg19.Arima.npz': 'https://www.dropbox.com/s/96huoy29epkxc3o/hg19.Arima.npz?dl=0',
+            'hg19_1kb_GCPercent.bw': 'https://www.dropbox.com/s/eohzp8fuhl8k4hp/hg19_1kb_GCPercent.bw?dl=0',
+            'hg19.HindIII.npz': 'https://www.dropbox.com/s/w3is2tz234n654w/hg19.HindIII.npz?dl=0',
+            'hg38.DpnII.npz': 'https://www.dropbox.com/s/ao2bhtm1ywu8xh7/hg38.MboI.npz?dl=0',
+            'hg19.DpnII.npz': 'https://www.dropbox.com/s/ri79752kfleuflo/hg19.MboI.npz?dl=0',
+            'hg19.BglII.npz': 'https://www.dropbox.com/s/4v82y0esewtwctu/hg19.BglII.npz?dl=0',
+            'hg38.BglII.npz': 'https://www.dropbox.com/s/vtokect6qend0xx/hg38.BglII.npz?dl=0',
+            'hg38.uniform.npz': 'https://www.dropbox.com/s/uf4bt101dapv21q/hg38.uniform.npz?dl=0',
+            'hg19.uniform.npz': 'https://www.dropbox.com/s/b53fzs3qy8lz9my/hg19.uniform.npz?dl=0'
         }
 
         cachefolder = os.path.abspath(os.path.expanduser(args.cachefolder))
