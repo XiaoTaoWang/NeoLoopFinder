@@ -44,6 +44,10 @@ script names:
 
   Perform HMM segmentation on a pre-calculated copy number variation profile.
 
+- plot-cnv
+  
+  Plot genome-wide CNV profiles and segments.
+
 - correct-cnv
 
   Remove copy number variation effects from cancer Hi-C.
