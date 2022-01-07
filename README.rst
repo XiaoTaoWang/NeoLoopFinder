@@ -1,3 +1,6 @@
+.. note:: the reference data for *calculate-cnv* have been migrated to dropbox,
+   if you encounter errors when you run *calculate-cnv*, consider update your
+   package by running ``pip install -U neoloop``.
 
 Neo-loop Finder
 ***************
