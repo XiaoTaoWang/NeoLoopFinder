@@ -515,10 +515,10 @@ class complexSV(Fusion):
                 if j1 > j2:
                     continue
                 ms = max(slopes[(j1, j1)][1], slopes[(j2, j2)][1])
-                if (slopes[(j1, j2)][0] > 0.6) and (slopes[(j1, j2)][1] > 0) and (ms > 0):
-                    if (j1, j2) in self.slopes:
-                        hcm[i1[0]:i1[1], i2[0]:i2[1]] = hcm[i1[0]:i1[1], i2[0]:i2[1]] / self.slopes[(j1, j2)]
-                    else:
+                if (j1, j2) in self.slopes:
+                    hcm[i1[0]:i1[1], i2[0]:i2[1]] = hcm[i1[0]:i1[1], i2[0]:i2[1]] / self.slopes[(j1, j2)]
+                else:
+                    if (slopes[(j1, j2)][0] > 0.6) and (slopes[(j1, j2)][1] > 0) and (ms > 0):
                         if j1 == j2:
                             hcm[i1[0]:i1[1], i2[0]:i2[1]] = hcm[i1[0]:i1[1], i2[0]:i2[1]] / slopes[(j1, j2)][1]
                         else:

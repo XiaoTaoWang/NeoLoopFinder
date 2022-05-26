@@ -77,7 +77,7 @@ def run():
         sorted_chroms = sort_chromlabels(chroms)
 
         # plot
-        fig = plt.figure(figsize=(5, 1.5))
+        fig = plt.figure(figsize=(5, 1))
         ax = fig.add_subplot(111)
         xbars = [0]
         start = 0
