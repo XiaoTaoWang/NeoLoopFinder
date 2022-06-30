@@ -28,17 +28,20 @@ def getargs():
     parser.add_argument('--assembly', help='''The assembled SV list outputed by assemble-complexSVs.''')
     
     # Algorithm
+    parser.add_argument('--cachefolder', help='''Path to a folder to place the pre-trained Peakachu models.
+                        This command will automatically download appropriate models according to the
+                        sequencing depths and resolutions of your input Hi-C matrices.''')
     parser.add_argument('-R', '--region-size', default=5000000, type=int,
                         help = '''The extended genomic span of SV break points.(bp)''')
     parser.add_argument('--balance-type', default='CNV', choices=['CNV', 'ICE'],
                         help = 'Normalization method.')
     parser.add_argument('--protocol', default='insitu', choices=['insitu', 'dilution'],
-                        help='''Experimental type of your contact matrices. insitu: insitu Hi-C; dilution: dilution Hi-C''')
+                        help='''Experimental protocol of your Hi-C.''')
     parser.add_argument('--prob', type=float, default=0.9,
                         help = 'Probability threshold.')
     parser.add_argument('--no-clustering', action = 'store_true',
                         help = 'No pooling will be performed if specified.')
-    parser.add_argument('--min-marginal-peaks', type = int, default = 1,
+    parser.add_argument('--min-marginal-peaks', type = int, default = 2,
                         help = '''Minimum marginal number of loops when detecting loop anchors.''')
     parser.add_argument('--nproc', default=1, type=int, help='Number of worker processes.')
     parser.add_argument('--logFile', default = 'neoloop.log', help = '''Logging file name.''')
@@ -81,11 +84,11 @@ def run():
         ## Logging for argument setting
         arglist = ['# ARGUMENT LIST:',
                    '# Output Path = {0}'.format(args.output),
+                   '# Cache Folder = {0}'.format(args.cachefolder),
                    '# SV assembly = {0}'.format(args.assembly),
                    '# Cooler List = {0}'.format(args.hic),
                    '# Extended Genomic Span = {0}bp'.format(args.region_size),
                    '# Balance Type = {0}'.format(args.balance_type),
-                   '# Experimental protocol = {0}'.format(args.protocol),
                    '# Probability threshold = {0}'.format(args.prob),
                    '# No pooling = {0}'.format(args.no_clustering),
                    '# Minimum marginal peaks = {0}'.format(args.min_marginal_peaks),
@@ -100,7 +103,7 @@ def run():
         import cooler
         
         rsize = args.region_size
-        protocol, prob, mmp = args.protocol, args.prob, args.min_marginal_peaks
+        prob, mmp = args.prob, args.min_marginal_peaks
         no_pool = args.no_clustering
         if args.balance_type == 'CNV':
             balance = 'sweight'
@@ -116,6 +119,12 @@ def run():
                 lib = cooler.Cooler(path)
                 res = lib.binsize
                 cools[res] = path
+            # download pre-trained models
+            cachefolder = os.path.abspath(os.path.expanduser(args.cachefolder))
+            if not os.path.exists(cachefolder):
+                os.makedirs(cachefolder)
+            models_by_res = download_peakachu_models(cachefolder, cools)
+
             # load structural variations
             logger.info('Load assembled SVs')
             lines = {}
@@ -131,7 +140,7 @@ def run():
                 clr = cooler.Cooler(cools[res])
                 Params = []
                 for k in lines:
-                    Params.append((clr, k, lines, rsize, balance, protocol, prob, mmp, no_pool))
+                    Params.append((clr, k, lines, rsize, balance, prob, mmp, no_pool, models_by_res))
 
                 results = Parallel(n_jobs=args.nproc, verbose=10)(delayed(pipeline)(*i) for i in Params)
                 
@@ -159,13 +168,13 @@ def run():
             traceback.print_exc(file = open(args.logFile, 'a'))
             sys.exit(1)
     
-def pipeline(clr, index, assemblies, rsize, balance, protocol, prob, mmp, nopool):
+def pipeline(clr, index, assemblies, rsize, balance, prob, mmp, nopool, models_by_res):
 
     from neoloop.callers import Peakachu
     from neoloop.assembly import complexSV
     import numpy as np
 
-    fu = complexSV(clr, assemblies[index], span=rsize, col=balance, protocol=protocol)
+    fu = complexSV(clr, assemblies[index], span=rsize, col=balance, protocol='insitu')
     fu.reorganize_matrix()
     if len(fu.Map) != fu.fusion_matrix.shape[0]:
         return # invalid assembly
@@ -173,7 +182,8 @@ def pipeline(clr, index, assemblies, rsize, balance, protocol, prob, mmp, nopool
     fu.correct_heterozygosity()
     fu.remove_gaps()
 
-    core = Peakachu(fu.gap_free, lower=6*fu.res, upper=3000000, res=fu.res, protocol=protocol)
+    core = Peakachu(fu.gap_free, upper=4000000, res=fu.res, protocol='insitu')
+    core.load_models(models_by_res)
     loop_index = core.predict(thre=prob, no_pool=nopool, min_count=mmp, index_map=fu.index_map,
                             chains=fu.chains)
         
@@ -183,7 +193,47 @@ def pipeline(clr, index, assemblies, rsize, balance, protocol, prob, mmp, nopool
         final_dict[k] = (index, loops[k][0], loops[k][1])
 
     return final_dict
+
+def match_digital_values(arr, v):
+
+    import numpy as np
+
+    diff = np.abs(v - np.r_[arr])
+    idx = np.argmin(diff)
+
+    return arr[idx]
+
+
+def download_peakachu_models(cachefolder, cools):
+
+    import cooler, joblib, subprocess, time
+
+    data_folder = os.path.join(os.path.split(neoloop.__file__)[0], 'data')
+    links = joblib.load(os.path.join(data_folder, 'peakachu-model-links.pkl'))
+
+    # estimate sequencing depth from cool
+    clr = cooler.Cooler(cools[max(cools)])
+    if 'sum' in clr.info:
+        seq_depth = clr.info['sum']
+    else:
+        if clr.info['nnz'] < 100000000:
+            seq_depth = clr.pixels()[:]['count'].values.sum()
+        else:
+            seq_depth = clr.info['nnz'] * 2.14447683
+    intra_depth = seq_depth * 0.73256754
+
+    model_by_res = {}
+    for res in cools:
+        m_res = match_digital_values(list(links), res)
+        m_depth = match_digital_values(list(links[m_res]), intra_depth)
+        weblink = links[m_res][m_depth]
+        ofil = os.path.join(cachefolder, 'peakachu.res{0}.depth{1}.pkl'.format(m_res, m_depth))
+        command = ['wget', '-O', ofil, '-L', weblink]
+        subprocess.check_call(' '.join(command), shell=True)
+        time.sleep(3)
+        model_by_res[res] = ofil
     
+    return model_by_res
 
 if __name__ == '__main__':
     run()

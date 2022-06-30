@@ -518,83 +518,23 @@ class Fusion(object):
     
 class Peakachu():
 
-    def __init__(self, matrix, lower=50000, upper=3000000, res=10000, protocol='insitu'):
+    def __init__(self, matrix, upper=4000000, res=10000, protocol='insitu'):
 
-        lower = lower // res
+        self.w = 5
         upper = upper // res
         R, C = matrix.nonzero()
         data = matrix[R, C]
-        validmask = np.isfinite(data) & (C-R+1 > lower) & (C-R < upper)
+        validmask = np.isfinite(data) & (C-R > (-2*self.w)) & (C-R < (upper+2*self.w))
         R, C, data = R[validmask], C[validmask], data[validmask]
         self.M = sparse.csr_matrix((data, (R, C)), shape=matrix.shape)
         self.ridx, self.cidx = R, C
         self.r = res
-        if (res == 10000) or (res == 5000):
-            self.w = 5
-        else:
-            self.w = 3
 
         self.protocol = protocol
-        self.load_models()
     
-    def load_models(self):
-
-        data_folder = os.path.join(os.path.split(neoloop.__file__)[0], 'data')
-        paths = {
-            'dilution':{
-                10000: {
-                    'total': os.path.join(data_folder, 'dilution.10K.5.pkl')
-                },
-                20000: {
-                    'total': os.path.join(data_folder, 'dilution.20K.3.pkl')
-                },
-                25000: {
-                    'total': os.path.join(data_folder, 'dilution.25K.3.pkl')
-                },
-                40000: {
-                    'total': os.path.join(data_folder, 'dilution.40K.3.pkl')
-                },
-                50000: {
-                    'total': os.path.join(data_folder, 'dilution.50K.3.pkl')
-                }
-            },
-            'insitu': {
-                10000: {
-                    'ctcf': os.path.join(data_folder, 'insitu.ctcf.10k.pkl'),
-                    'h3k27ac': os.path.join(data_folder, 'insitu.h3k27ac.10k.pkl')
-                },
-                20000: {
-                    'ctcf': os.path.join(data_folder, 'insitu.ctcf.20k.pkl'),
-                    'h3k27ac': os.path.join(data_folder, 'insitu.h3k27ac.20k.pkl')
-                },
-                25000: {
-                    'ctcf': os.path.join(data_folder, 'insitu.ctcf.25k.pkl'),
-                    'h3k27ac': os.path.join(data_folder, 'insitu.h3k27ac.25k.pkl')
-                },
-                5000: {
-                    'ctcf': os.path.join(data_folder, 'insitu.per7.5.h3k27ac.5k.pkl'),
-                    'h3k27ac': os.path.join(data_folder, 'insitu.per7.5.h3k27ac.5k.pkl'),
-                }
-            },
-            'chiapet-pol2': {
-                5000: {
-                    'ctcf': os.path.join(data_folder, 'chiapet.mcf7.pol2.5k.pkl'),
-                    'h3k27ac': os.path.join(data_folder, 'chiapet.mcf7.pol2.5k.pkl'),
-                }
-            },
-            'chiapet-ctcf': {
-                5000: {
-                    'ctcf': os.path.join(data_folder, 'chiapet.mcf7.ctcf.5k.pkl'),
-                    'h3k27ac': os.path.join(data_folder, 'chiapet.mcf7.ctcf.5k.pkl'),
-                }
-            }
-        }
-
-        _models = paths[self.protocol][self.r]
+    def load_models(self, models_by_res):
         
-        models = {w:joblib.load(_models[w]) for w in _models}
-        
-        self.models = models
+        self.model = joblib.load(models_by_res[self.r])
     
     def getwindow(self, coords, w):
         '''
@@ -606,22 +546,20 @@ class Peakachu():
             if (x - w < 0) or (y + w + 1 > self.M.shape[0]):
                 # suppose it's a upper-triangular matrix
                 continue
+            if y - x - 2 < self.w:
+                continue
             window = self.M[x-w:x+w+1, y-w:y+w+1].toarray()
-            if np.count_nonzero(window) < window.size * 0.2:
+            if np.count_nonzero(window) < window.size * 0.1:
                 continue
-            center = window[w, w]
-            ls = window.shape[0]
-            ll = np.mean(window[ls-1-ls//4:ls, :1+ls//4])
-            if ll == 0:
-                continue
-            p2LL = center / np.mean(window[ls-1-ls//4:ls, :1+ls//4])
-            ranks = stats.rankdata(window, method='ordinal')
-            if self.protocol in ['chiapet-pol2', 'chiapet-ctcf']:
-                window = np.r_[window.ravel(), ranks]
-            else:
+            
+            if np.mean(window[:w, :w]) > 0:
+                ranks = stats.rankdata(window, method='ordinal')
+                center = window[w, w]
+                p2LL = center/np.mean(window[:w, :w])
                 window = np.r_[window.ravel(), ranks, p2LL]
-            fea.append(window)
-            clist.append((x, y))
+                if window.size == 1+2*(1+2*w)**2:
+                    fea.append(window)
+                    clist.append((x, y))
         
         fea = np.r_[fea]
         clist = np.r_[clist]
@@ -635,29 +573,27 @@ class Peakachu():
         fea, clist = self.getwindow(coords, self.w)
         if len(fea.shape) != 2:
             return list(loop_list)
-
-        for k in self.models:
-            model = self.models[k]
-            probas = model.predict_proba(fea)[:, 1]
-            pM = sparse.csr_matrix((probas, (clist[:,0], clist[:,1])),
-                                shape=self.M.shape)
-            pfilter = probas >= thre
-            ri = clist[:, 0][pfilter]
-            ci = clist[:, 1][pfilter]
-            Donuts = {(i, j): self.M[i,j] for i, j in zip(ri, ci)} # total predictions
-            if not no_pool:
-                tmp = self.local_clustering(Donuts, min_count=min_count, index_map=index_map,
-                                            chains=chains)
-            else:
-                tmp = Donuts
-            for i, j in tmp:
-                loop_list.add((i, j, pM[i,j]))
+        
+        probas = self.model.predict_proba(fea)[:, 1]
+        pM = sparse.csr_matrix((probas, (clist[:,0], clist[:,1])),
+                            shape=self.M.shape)
+        pfilter = probas >= thre
+        ri = clist[:, 0][pfilter]
+        ci = clist[:, 1][pfilter]
+        Donuts = {(i, j): self.M[i,j] for i, j in zip(ri, ci)}
+        if not no_pool:
+            tmp = self.local_clustering(Donuts, min_count=min_count, index_map=index_map,
+                                        chains=chains)
+        else:
+            tmp = Donuts
+        for i, j in tmp:
+            loop_list.add((i, j, pM[i,j]))
         
         loop_list = list(loop_list)
 
         return loop_list
     
-    def _local_search(self, candidates, Donuts, r=20000, index_map=None,
+    def _local_search(self, candidates, Donuts, r=10000, index_map=None,
         chains=None):
 
         final_list = set()
@@ -684,7 +620,7 @@ class Peakachu():
         
         return final_list
     
-    def local_clustering(self, Donuts, min_count=1, r=20000, index_map=None,
+    def local_clustering(self, Donuts, min_count=2, r=15000, index_map=None,
         chains=None):
 
         byregion = {}
@@ -712,7 +648,7 @@ class Peakachu():
         return coords
 
 
-    def _local_clustering(self, Donuts, min_count=1, r=20000):
+    def _local_clustering(self, Donuts, min_count=1, r=15000):
 
         final_list = []
         x = np.r_[[i[0] for i in Donuts]]
@@ -722,7 +658,7 @@ class Peakachu():
 
         x_anchors = self.find_anchors(x, min_count=min_count, min_dis=r)
         y_anchors = self.find_anchors(y, min_count=min_count, min_dis=r)
-        r = max(r//self.r, 1)
+        r = max(r//self.r, 2)
         visited = set()
         lookup = set(zip(x, y))
         for x_a in x_anchors:
@@ -753,13 +689,16 @@ class Peakachu():
         
         return final_list
     
-    def find_anchors(self, pos, min_count=3, min_dis=20000, wlen=200000):
+    def find_anchors(self, pos, min_count=3, min_dis=15000, wlen=40000):
 
         from collections import Counter
         from scipy.signal import find_peaks, peak_widths
 
-        min_dis = max(min_dis//self.r, 1)
-        wlen = min(wlen//self.r, 20)
+        min_dis = max(min_dis//self.r, 2)
+        if self.r <= 10000:
+            wlen = min(wlen//self.r, 20)
+        else:
+            wlen = 4
 
         count = Counter(pos)
         refidx = range(min(count), max(count)+1)

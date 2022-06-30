@@ -38,7 +38,9 @@ def getargs():
     parser.add_argument('--line-width', default=1, type=float, help='''Width of the CNV segment lines.''')
     parser.add_argument('--label-size', default=6, type=float, help='''Label fontsize.''')
     parser.add_argument('--tick-label-size', default=3, type=float, help='''Fontsize of the tick labels.''')
-    parser.add_argument('--dpi', default=1000, type=int)
+    parser.add_argument('--maximum-value', type=float)
+    parser.add_argument('--minimum-value', type=float)
+    parser.add_argument('--dpi', default=500, type=int)
     parser.add_argument('--clean-mode', action = 'store_true')
 
     ## Parse the command-line arguments
@@ -114,6 +116,12 @@ def run():
 
         ax.xaxis.set_tick_params(width=0.7, labelsize=args.tick_label_size, pad=2, length=0)
         ax.yaxis.set_tick_params(width=0.7, labelsize=args.tick_label_size, pad=2, length=2)
+        ymin, ymax = ax.get_ylim()
+        if not args.maximum_value is None:
+            ymax = args.maximum_value
+        if not args.minimum_value is None:
+            ymin = args.minimum_value
+        ax.set_ylim(ymin, ymax)
         plt.savefig(args.output_figure_name, dpi=args.dpi, bbox_inches='tight')
         plt.close()
 
