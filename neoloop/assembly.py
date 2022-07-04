@@ -9,9 +9,10 @@ from networkx.algorithms import all_shortest_paths, has_path
 
 log = logging.getLogger(__name__)
 
-def filterSV(clr, c1, c2, p1, p2, s1, s2, note, span, col, protocol, cutoff):
+def filterSV(clr, c1, c2, p1, p2, s1, s2, note, span, col, protocol, cutoff, expected_values):
 
-    fu = Fusion(clr, c1, c2, p1, p2, s1, s2, note, span=span, col=col, protocol=protocol, trim=False)
+    fu = Fusion(clr, c1, c2, p1, p2, s1, s2, note, span=span, col=col,
+                protocol=protocol, trim=False, expected_values=expected_values)
     fu.detect_bounds()
     fu.allele_slope()
     fu.correct_heterozygosity()
@@ -25,9 +26,9 @@ def filterSV(clr, c1, c2, p1, p2, s1, s2, note, span, col, protocol, cutoff):
     else:
         return
 
-def filterAssembly(clr, ID, span, col, path, protocol):
+def filterAssembly(clr, ID, span, col, path, protocol, expected):
 
-    wk = complexSV(clr, ID, span, col, protocol=protocol)
+    wk = complexSV(clr, ID, span, col, protocol=protocol, expected_values=expected)
     wk.reorganize_matrix()
     wk.correct_heterozygosity()
     connectable = (len(wk.pair_binary)==wk.valid_counts) and wk.connectivity
@@ -38,7 +39,7 @@ def filterAssembly(clr, ID, span, col, path, protocol):
 class assembleSV(object):
 
     def __init__(self, clr, sv_fil, span=5000000, col='sweight', minIntra=500000,
-        n_jobs=1, protocol='insitu', r_cutoff=0.6):
+        n_jobs=1, protocol='insitu', r_cutoff=0.6, expected_values=None):
 
         self.clr = clr
         self.res = clr.binsize
@@ -46,13 +47,14 @@ class assembleSV(object):
         self.span = span
         self.balance_type = col
         self.n_jobs = n_jobs
+        self.expected = expected_values
         # read SVs
         sv_list = load_translocation_fil(sv_fil, clr.binsize, minIntra)
         
         # filter sv by checking power-law decay of the induced interactions
         params = []
         for c1, p1, s1, c2, p2, s2, note in sv_list:
-            params.append((clr, c1, c2, p1, p2, s1, s2, note, span, col, protocol, r_cutoff))
+            params.append((clr, c1, c2, p1, p2, s1, s2, note, span, col, protocol, r_cutoff, expected_values))
         
         results = Parallel(n_jobs=n_jobs, verbose=10)(delayed(filterSV)(*i) for i in params)
         self.queue = []
@@ -103,7 +105,11 @@ class assembleSV(object):
         
         # so far, the candidate paths contain no self-loops, but are still redundant
         # check distance-decay for each pair of regions
-        queue = [(self.clr, self._change_format(p[1]), self.span, self.balance_type, p[1], self.protocol) for p in pool]
+        queue = []
+        for p in pool:
+            queue.append((self.clr, self._change_format(p[1]), self.span,
+                          self.balance_type, p[1], self.protocol,
+                          self.expected))
         log.info('Filtering {0} redundant candidates ...'.format(len(queue)))
         jobs = Parallel(n_jobs=self.n_jobs, verbose=10)(delayed(filterAssembly)(*i) for i in queue)
         pre_alleles = []
@@ -261,7 +267,7 @@ class assembleSV(object):
 class complexSV(Fusion):
 
     def __init__(self, clr, candidate, span=5000000, col='sweight', protocol='insitu',
-        flexible=True, slopes={}):
+        flexible=True, slopes={}, expected_values=None):
 
         self.clr = clr
         self.res = clr.binsize
@@ -298,7 +304,10 @@ class complexSV(Fusion):
                 self.tb.extend(intervals)
                 self.to.extend(directs)
         
-        self.load_expected()
+        if expected_values is None:
+            self.load_expected()
+        else:
+            self.expected = expected_values
     
     def parse_input(self, candidate):
 
@@ -491,7 +500,7 @@ class complexSV(Fusion):
                 _rscores = []
                 _slopes = []
                 warning = []
-                for maxdis in [400000, 1000000, 1500000, 2000000]:
+                for maxdis in [200000, 400000, 500000, 1000000, 1500000, 2000000]:
                     local_exp = self._extract_xy(valid_pixel, mink=3, maxdis=maxdis)
                     r, s, w = self.linear_regression(local_exp, self.expected, min_samples=5)
                     warning.append(w)
@@ -522,7 +531,7 @@ class complexSV(Fusion):
                         if j1 == j2:
                             hcm[i1[0]:i1[1], i2[0]:i2[1]] = hcm[i1[0]:i1[1], i2[0]:i2[1]] / slopes[(j1, j2)][1]
                         else:
-                            factor = min(1/slopes[(j1, j2)][1], 3/ms)
+                            factor = min(1/slopes[(j1, j2)][1], 5/ms)
                             hcm[i1[0]:i1[1], i2[0]:i2[1]] = hcm[i1[0]:i1[1], i2[0]:i2[1]] * factor
         
         x, y = hcm.nonzero()

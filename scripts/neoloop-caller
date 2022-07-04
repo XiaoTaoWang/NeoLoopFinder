@@ -21,10 +21,14 @@ def getargs():
                         help='Print version number and exit.')
 
     # Output
-    parser.add_argument('-O', '--output', help='Output path.')
+    parser.add_argument('-O', '--output', help='Path to the output file.')
 
     # Input
-    parser.add_argument('-H', '--hic', nargs='+', help='''List of cooler URIs.''')
+    parser.add_argument('-H', '--hic', nargs='+', help='''List of cooler URIs. If URIs at multiple
+                        resolutions are provided, the program will first detect neo-loops from
+                        each individual resolution, and then combine results from all resolutions
+                        in a non-redundant way. If an interaction is detected as a loop in multiple
+                        resolutions, only the one with the highest resolution will be recorded.''')
     parser.add_argument('--assembly', help='''The assembled SV list outputed by assemble-complexSVs.''')
     
     # Algorithm
@@ -100,6 +104,7 @@ def run():
 
         from joblib import Parallel, delayed
         from neoloop.callers import combine_annotations
+        from neoloop.util import calculate_expected
         import cooler
         
         rsize = args.region_size
@@ -133,14 +138,21 @@ def run():
                     parse = line.rstrip().split()
                     lines[parse[0]] = '\t'.join(parse[1:])
 
-            logger.info('Predict loops ...')
             byres = {}
             for res in sorted(cools, reverse=True):
-                logger.info('resolution: {0} ...'.format(res))
+                logger.info('Current resolution: {0}'.format(res))
                 clr = cooler.Cooler(cools[res])
+                logger.info('Calculate the global average contact frequencies at each genomic distance ...')
+                chroms = []
+                for c in clr.chromnames:
+                    if (not '_' in c) and (not 'M' in c) and (not 'X' in c) and \
+                       (not 'Y' in c) and (not 'MT' in c) and (not 'EBV' in c):
+                       chroms.append(c)
+                expected = calculate_expected(clr, chroms, maxdis=5000000, balance=balance, nproc=args.nproc)
+                logger.info('Done')
                 Params = []
                 for k in lines:
-                    Params.append((clr, k, lines, rsize, balance, prob, mmp, no_pool, models_by_res))
+                    Params.append((clr, k, lines, rsize, balance, prob, mmp, no_pool, models_by_res, expected))
 
                 results = Parallel(n_jobs=args.nproc, verbose=10)(delayed(pipeline)(*i) for i in Params)
                 
@@ -168,13 +180,14 @@ def run():
             traceback.print_exc(file = open(args.logFile, 'a'))
             sys.exit(1)
     
-def pipeline(clr, index, assemblies, rsize, balance, prob, mmp, nopool, models_by_res):
+def pipeline(clr, index, assemblies, rsize, balance, prob, mmp, nopool, models_by_res, expected):
 
     from neoloop.callers import Peakachu
     from neoloop.assembly import complexSV
     import numpy as np
 
-    fu = complexSV(clr, assemblies[index], span=rsize, col=balance, protocol='insitu')
+    fu = complexSV(clr, assemblies[index], span=rsize, col=balance,
+                   protocol='insitu', expected_values=expected)
     fu.reorganize_matrix()
     if len(fu.Map) != fu.fusion_matrix.shape[0]:
         return # invalid assembly
@@ -228,9 +241,10 @@ def download_peakachu_models(cachefolder, cools):
         m_depth = match_digital_values(list(links[m_res]), intra_depth)
         weblink = links[m_res][m_depth]
         ofil = os.path.join(cachefolder, 'peakachu.res{0}.depth{1}.pkl'.format(m_res, m_depth))
-        command = ['wget', '-O', ofil, '-L', weblink]
-        subprocess.check_call(' '.join(command), shell=True)
-        time.sleep(3)
+        if not os.path.exists(ofil):
+            command = ['wget', '-O', ofil, '-L', weblink]
+            subprocess.check_call(' '.join(command), shell=True)
+            time.sleep(3)
         model_by_res[res] = ofil
     
     return model_by_res

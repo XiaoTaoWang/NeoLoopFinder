@@ -66,7 +66,7 @@ def check_increasing(x, y):
 class Fusion(object):
 
     def __init__(self, clr, c1, c2, p1, p2, s1, s2, sv_type, span=5000000,
-        col='sweight', trim=True, protocol='insitu'):
+        col='sweight', trim=True, protocol='insitu', expected_values=None):
 
         self.clr = clr
         self.p1 = p1
@@ -86,36 +86,26 @@ class Fusion(object):
                                 [sv_type, c1.lstrip('chr'), p1, s1, c2.lstrip('chr'), p2, s2]))
 
         self.get_matrix(span, col, trim)
-        self.load_expected()
+        if expected_values is None:
+            self.load_expected()
+        else:
+            self.expected = expected_values
     
     def load_expected(self):
 
         data_folder = os.path.join(os.path.split(neoloop.__file__)[0], 'data')
-        paths = {'dilution':{
-            10000: os.path.join(data_folder, 'gm.dilution.expected.10k.pkl'),
-            20000: os.path.join(data_folder, 'gm.dilution.expected.20k.pkl'),
-            25000: os.path.join(data_folder, 'gm.dilution.expected.25k.pkl'),
-            40000: os.path.join(data_folder, 'gm.dilution.expected.40k.pkl'),
-            50000: os.path.join(data_folder, 'gm.dilution.expected.50k.pkl')
-        },
-        'insitu':{
-            5000: os.path.join(data_folder, 'gm-300m.insitu.expected.5k.pkl'),
+        paths = {
+            5000: os.path.join(data_folder, 'gm.insitu.expected.5k.pkl'),
             10000: os.path.join(data_folder, 'gm.insitu.expected.10k.pkl'),
             20000: os.path.join(data_folder, 'gm.insitu.expected.20k.pkl'),
-            25000: os.path.join(data_folder, 'gm.insitu.expected.25k.pkl')
-        },
-        'chiapet-pol2':{
-            5000: os.path.join(data_folder, 'chiapet.mcf7.pol2.expected.5k.pkl')
-        },
-        'chiapet-ctcf':{
-            5000: os.path.join(data_folder, 'chiapet.mcf7.ctcf.expected.5k.pkl')
-        }
+            25000: os.path.join(data_folder, 'gm.insitu.expected.25k.pkl'),
+            40000: os.path.join(data_folder, 'gm.insitu.expected.40k.pkl'),
+            50000: os.path.join(data_folder, 'gm.insitu.expected.50k.pkl')
         }
         
         self.expected = {}
-        if self.protocol in paths:
-            if self.res in paths[self.protocol]:
-                self.expected = joblib.load(paths[self.protocol][self.res])
+        if self.res in paths:
+            self.expected = joblib.load(paths[self.res])
          
 
     def get_matrix(self, span, col, trim):
@@ -323,7 +313,7 @@ class Fusion(object):
         loci = loci_1 + loci_2
         loci.sort()
         if left_most:
-            b = loci[0][1]
+            b = loci[0][1] - 1
         else:
             b = loci[-1][0]
         
@@ -423,7 +413,7 @@ class Fusion(object):
             d_g_slopes = []
             m_g_rscores = []
             m_g_slopes = []
-            for maxdis in [400000, 1000000, 1500000]:
+            for maxdis in [200000, 400000, 500000, 1000000, 1500000, 2000000]:
                 for mink in [3]:
                     # middle
                     inter_mask = np.zeros(shape, dtype=bool)
@@ -475,7 +465,7 @@ class Fusion(object):
     
     def correct_heterozygosity(self):
 
-        ## This method assumes allele slope has been called previously
+        ## This method assumes allele slope has been called
         junc = self.fusion_point
         hcm = self.fusion_matrix.copy() # heterozygosity corrected matrix
         log.info('{0}: left slope: {1}, R^2: {2}'.format(self.name, self.u_g_s, self.u_g_r))
@@ -490,7 +480,7 @@ class Fusion(object):
             self.u_s = self.m_g_s / self.u_g_s
             self.d_s = self.m_g_s / self.d_g_s
             if (self.m_g_r > 0.6) and (self.m_g_s / ms > 0.1):
-                factor = min(1/self.m_g_s, 3/slope)
+                factor = min(1/self.m_g_s, 5/slope)
                 hcm[self.up_i:junc, junc:self.down_i] = hcm[self.up_i:junc, junc:self.down_i] * factor
 
         self.hcm = hcm
@@ -533,6 +523,8 @@ class Peakachu():
         self.protocol = protocol
     
     def load_models(self, models_by_res):
+        
+        from sklearn.externals import joblib
         
         self.model = joblib.load(models_by_res[self.r])
     

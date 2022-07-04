@@ -5,6 +5,7 @@ Created on Tue Sep 18 22:15:12 2018
 """
 import numpy as np
 import bisect, os
+from sklearn.isotonic import IsotonicRegression
 
 def find_chrom_pre(chromlabels):
 
@@ -14,7 +15,6 @@ def find_chrom_pre(chromlabels):
     
     else:
         return ''
-
 
 def extract_sv_region(hic_pool, c1, c2, pos_1, pos_2, strand_1, strand_2,
                       radius=5000000):
@@ -399,3 +399,67 @@ def properU(pos):
         return ''.join([str(d_part), 'K'])
     else:
         return ''.join([str(i_part), 'M'])
+
+def _prepare_core(pool_args):
+    
+    clr, c, maxdis, balance = pool_args
+
+    expected = {} # average over each genomic distance
+    hic = clr.matrix(balance=balance, sparse=True).fetch(c)
+
+    if type(balance)==bool:
+        weights = clr.bins().fetch(c)['weight'].values
+    else:
+        weights = clr.bins().fetch(c)[balance].values
+
+    tmp = np.isfinite(weights) & (weights > 0)
+    n = hic.shape[0]
+    maxdis = min(n-1, maxdis)
+    # Assign values for each genomic distance
+    for i in range(1, maxdis+1):
+        valid = tmp[:-i] * tmp[i:]
+        current = hic.diagonal(i)[valid]
+        if current.size > 0:
+            expected[i] = [current.sum(), current.size]
+    
+    return expected
+
+def calculate_expected(clr, chroms, maxdis=5000000, balance=True, nproc=1):
+
+    from multiprocess import Pool
+    
+    res = clr.binsize
+    maxdis = maxdis // res
+    args = []
+    for c in chroms:
+        args.append((clr, c, maxdis, balance))
+    
+    # Allocate processes
+    if nproc==1:
+        results = list(map(_prepare_core, args))
+    else:
+        pool = Pool(nproc)
+        results = pool.map(_prepare_core, args)
+        pool.close()
+        pool.join()
+
+    expected = {}
+    for i in range(1, maxdis+1):
+        nume = 0
+        denom = 0
+        for extract in results:
+            if i in extract:
+                nume += extract[i][0]
+                denom += extract[i][1]
+        if (denom > 10) and (nume > 0):
+            expected[i] = nume / denom
+    
+    IR = IsotonicRegression(increasing=False, out_of_bounds='clip')
+    _d = np.r_[sorted(expected)]
+    _y = np.r_[[expected[i] for i in _d]]
+    IR.fit(_d, _y)
+    d = np.arange(1, maxdis+1)
+    exp = IR.predict(d)
+    expected = dict(zip(d, exp))
+
+    return expected

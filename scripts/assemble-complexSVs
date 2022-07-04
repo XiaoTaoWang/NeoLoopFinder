@@ -26,7 +26,10 @@ def getargs():
     # Input
     parser.add_argument('-B', '--break-points', help='''Path to a TXT file containing pairs
                         of break points.''')
-    parser.add_argument('-H', '--hic', help='''Cool URI.''')
+    parser.add_argument('-H', '--hic', nargs='+', help='''List of cooler URIs. If URIs at multiple
+                        resolutions are provided, the program will first detect complex SVs from
+                        each individual resolution, and then combine results from all resolutions
+                        in a non-redundant way.''')
     parser.add_argument('-R', '--region-size', default=5000000, type=int,
                         help = '''The extended genomic span of SV break points.(bp)''')
     parser.add_argument('--minimum-size', default=500000, type=int,
@@ -90,32 +93,140 @@ def run():
         logger.info('\n' + argtxt)
 
         from neoloop.assembly import assembleSV
-        import cooler
+        from neoloop.util import calculate_expected
+        import cooler, subprocess
 
         if args.balance_type == 'CNV':
             balance = 'sweight'
-        else:
+        elif args.balance_type == 'ICE':
             balance = 'weight'
+        else:
+            balance = False
 
         try:
-            clr = cooler.Cooler(args.hic)
-            logger.info('Filtering SVs by checking distance decay of the induced contacts ...')
-            work = assembleSV(clr, args.break_points, span=args.region_size, col=balance, n_jobs=args.nproc,
-                            protocol=args.protocol, minIntra=args.minimum_size)
-            logger.info('{0} SVs left'.format(len(work.queue)))
-            logger.info('Building SV connecting graph ...')
-            work.build_graph()
-            logger.info('Discovering and re-ordering complex SVs ...')
-            work.find_complexSV()
-            allele = len(work.alleles)
-            logger.info('Called {0} connected assemblies'.format(allele))
-            logger.info('Output ...')
-            work.output_all(args.output+'.assemblies.txt')
+            # load Hi-C matrix
+            cools = {}
+            for path in args.hic:
+                lib = cooler.Cooler(path)
+                res = lib.binsize
+                cools[res] = path
             
+            by_res = {}
+            for res in cools:
+                clr = cooler.Cooler(cools[res])
+                logger.info('Current resolution: {0}'.format(res))
+                logger.info('Calculate the global average contact frequencies at each genomic distance ...')
+                chroms = []
+                for c in clr.chromnames:
+                    if (not '_' in c) and (not 'M' in c) and (not 'X' in c) and \
+                       (not 'Y' in c) and (not 'MT' in c) and (not 'EBV' in c):
+                       chroms.append(c)
+                expected = calculate_expected(clr, chroms, maxdis=5000000, balance=balance, nproc=args.nproc)
+                logger.info('Done')
+                logger.info('Filtering SVs by checking distance decay of chromatin contacts across SV breakpoints ...')
+                work = assembleSV(clr, args.break_points, span=args.region_size, col=balance,
+                                  n_jobs=args.nproc, protocol=args.protocol, minIntra=args.minimum_size,
+                                  expected_values=expected)
+                logger.info('{0} SVs left'.format(len(work.queue)))
+                logger.info('Building SV connecting graph ...')
+                work.build_graph()
+                logger.info('Discovering and re-ordering complex SVs ...')
+                work.find_complexSV()
+                allele = len(work.alleles)
+                logger.info('Called {0} connected assemblies'.format(allele))
+                outfil = '{0}.assemblies.{1}.txt'.format(args.output, res)
+                work.output_all(outfil)
+                by_res[res] = outfil
+            
+            outfil = '{0}.assemblies.txt'.format(args.output)
+            if len(by_res) == 1:
+                command = ['mv', by_res[res], outfil]
+                subprocess.check_call(' '.join(command), shell=True)
+            else:
+                logger.info('Merge complex SV results from multiple resolutions ...')
+                As, Cs = combine(by_res)
+                with open(outfil, 'w') as out:
+                    pool = []
+                    for k in As:
+                        pool.append((len(k),) + k + tuple(As[k]))
+                    pool.sort(reverse=True)
+                    for i, record in enumerate(pool):
+                        tmp = ['A{0}'.format(i)] + list(record[1:])
+                        out.write('\t'.join(tmp)+'\n')
+                    
+                    pool = []
+                    for k in Cs:
+                        pool.append((len(k),) + k + tuple(Cs[k]))
+                    for i, record in enumerate(pool):
+                        tmp = ['C{0}'.format(i)] + list(record[1:])
+                        out.write('\t'.join(tmp)+'\n')
+
             logger.info('Done')
         except:
             traceback.print_exc(file = open(args.logFile, 'a'))
             sys.exit(1)
+
+def _issubset(p1, p2):
+
+    import numpy as np
+
+    index = []
+    for i in p1:
+        if i in p2:
+            index.append(p2.index(i))
+        else:
+            return False
+    
+    idx = np.r_[index]
+    df = np.diff(idx)
+
+    return np.all(df==1)
+
+def parse_assemblies(fil):
+
+    As = {}
+    Cs = {}
+    with open(fil, 'r') as source:
+        for line in source:
+            parse = line.rstrip().split()
+            key = tuple(parse[1:-2])
+            values = parse[-2:]
+            if parse[0].startswith('A'):
+                As[key] = values
+            if parse[0].startswith('C'):
+                Cs[key] = values
+    
+    return As, Cs
+
+def combine(by_res):
+
+    As, Cs = parse_assemblies(by_res[min(by_res)])
+    for r in by_res:
+        if r == min(by_res):
+            continue
+        tA, tC = parse_assemblies(by_res[r])
+        for k in tA:
+            if not k in As:
+                As[k] = tA[k]
+        for k in tC:
+            if not k in Cs:
+                Cs[k] = tC[k]
+
+    # remove redundant assembly
+    Apool = [(len(k), k) for k in As]
+    Apool.sort(reverse=True)
+    alleles = []
+    for _, p in Apool:
+        for v in alleles:
+            if _issubset(p, v):
+                break
+        else:
+            alleles.append(p)
+    Afinal = {}
+    for k in alleles:
+        Afinal[k] = As[k]
+    
+    return Afinal, Cs
 
 if __name__ == '__main__':
     run()
