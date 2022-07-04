@@ -511,7 +511,10 @@ class complexSV(Fusion):
                 s = _slopes[_rscores.argmax()]
                     
                 if any(warning):
-                    pair_binary[(j1, j2)] = 0
+                    if r > 0.6:
+                        pair_binary[(j1, j2)] = 1
+                    else:
+                        pair_binary[(j1, j2)] = 0
                 else:
                     pair_binary[(j1, j2)] = 1
                 
