@@ -30,7 +30,7 @@ def getargs():
                         setting this parameter to "uniform".''')
     parser.add_argument('--output', help='''Output file path.''')
 
-    parser.add_argument('--cachefolder', help='''Cache folder. We suggest keep this setting the same
+    parser.add_argument('--cachefolder', default='.cache', help='''Cache folder. We suggest keep this setting the same
                         between different runs.''')
     parser.add_argument('--logFile', default = 'cnv-calculation.log', help = '''Logging file name.''')
 

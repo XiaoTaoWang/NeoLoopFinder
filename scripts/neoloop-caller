@@ -32,7 +32,7 @@ def getargs():
     parser.add_argument('--assembly', help='''The assembled SV list outputed by assemble-complexSVs.''')
     
     # Algorithm
-    parser.add_argument('--cachefolder', help='''Path to a folder to place the pre-trained Peakachu models.
+    parser.add_argument('--cachefolder', default='.cache', help='''Path to a folder to place the pre-trained Peakachu models.
                         This command will automatically download appropriate models according to the
                         sequencing depths and resolutions of your input Hi-C matrices.''')
     parser.add_argument('-R', '--region-size', default=5000000, type=int,
