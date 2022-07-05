@@ -8,7 +8,7 @@ import logging, neoloop, os, joblib, math
 import numpy as np
 from scipy import sparse, stats
 from scipy.stats import poisson
-from sklearn.linear_model import HuberRegressor, LinearRegression
+from sklearn.linear_model import HuberRegressor
 from sklearn.isotonic import IsotonicRegression
 from neoloop.util import find_chrom_pre, map_coordinates
 from scipy.stats import spearmanr
@@ -61,6 +61,31 @@ def check_increasing(x, y):
             warning = True
 
     return warning, increasing_bool
+
+def clean_inputs(Xi, X, Y, increasing_bool):
+
+    IR = IsotonicRegression(increasing=increasing_bool)
+    IR.fit(Xi, Y)
+    Y1 = IR.predict(Xi)
+    vi = np.where(np.diff(Y1) < 0)[0]
+    pieces = np.split(vi, np.where(np.diff(vi)!=1)[0]+1)
+    si = 0
+    for i in range(len(pieces)-1):
+        p1 = pieces[i]
+        p2 = pieces[i+1]
+        if p1.size / (p2[0] - p1[0]) > 0.5:
+            si = p1[0]
+            break
+    
+    if si / X.size > 0.3: # if more than 1/4 data discarded
+        si = vi[0]
+        if si / X.size > 0.3:
+            si = 0
+    
+    X = X[si:]
+    Y = Y[si:]
+
+    return X, Y
 
 
 class Fusion(object):
@@ -360,38 +385,28 @@ class Fusion(object):
         else:
             # clean the inputs by isotonic regression
             warning, increasing_bool = check_increasing(Xi, Y)
-            IR = IsotonicRegression(increasing=increasing_bool)
-            IR.fit(Xi, Y)
-            Y1 = IR.predict(Xi)
-            vi = np.where(np.diff(Y1) < 0)[0]
-            pieces = np.split(vi, np.where(np.diff(vi)!=1)[0]+1)
-            si = 0
-            for i in range(len(pieces)-1):
-                p1 = pieces[i]
-                p2 = pieces[i+1]
-                if p1.size / (p2[0] - p1[0]) > 0.5:
-                    si = p1[0]
-                    break
-            
-            if si / X.size > 0.3: # if more than 1/4 data discarded
-                si = vi[0]
-                if si / X.size > 0.3:
-                    si = 0
-            
-            X = X[si:]
-            Y = Y[si:]
+            X_clean, Y_clean = clean_inputs(Xi, X, Y, increasing_bool)
+            rscores = []
+            slopes = []
+            for X_, Y_ in ([X, Y], [X_clean, Y_clean]):
+                X_ = X_[:, np.newaxis]
+                huber = HuberRegressor().fit(X_, Y_)
+                inlier_mask = np.logical_not(huber.outliers_)
+                if inlier_mask.sum() < min_samples:
+                    rscore = 0
+                    slope = 0
+                else:
+                    sX = X_[inlier_mask]
+                    sY = Y_[inlier_mask]
+                    rscore = huber.score(sX, sY)
+                    slope = huber.coef_[0]
+                rscores.append(rscore)
+                slopes.append(slope)
 
-            X = X[:, np.newaxis]
-            huber = HuberRegressor().fit(X, Y)
-            inlier_mask = np.logical_not(huber.outliers_)
-            if inlier_mask.sum() < min_samples:
-                rscore = 0
-                slope = 0
-            else:
-                sX = X[inlier_mask]
-                sY = Y[inlier_mask]
-                rscore = huber.score(sX, sY)
-                slope = huber.coef_[0]
+            rscores = np.r_[rscores]
+            slopes = np.r_[slopes]
+            rscore = rscores.max()
+            slope = slopes[np.argmax(rscores)]
 
         return rscore, slope, warning
 

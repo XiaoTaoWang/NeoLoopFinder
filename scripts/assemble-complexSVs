@@ -5,7 +5,7 @@
 
 ## Required modules
 
-import argparse, sys, logging, logging.handlers, traceback, neoloop
+import argparse, sys, logging, logging.handlers, traceback, neoloop, os
 
 currentVersion = neoloop.__version__
 
@@ -160,6 +160,9 @@ def run():
                     for i, record in enumerate(pool):
                         tmp = ['C{0}'.format(i)] + list(record[1:])
                         out.write('\t'.join(tmp)+'\n')
+
+                for res in by_res:
+                    os.remove(by_res[res])
 
             logger.info('Done')
         except:
