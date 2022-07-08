@@ -101,7 +101,7 @@ def run():
         if args.clean_mode:
             tmp = [xticks[i] for i in range(0, len(xticks), 2)]
             xticks = tmp
-            tmp = [chroms[i] for i in range(0, len(chroms), 2)]
+            tmp = [sorted_chroms[i] for i in range(0, len(sorted_chroms), 2)]
             chroms = tmp
 
         ax.set_xticks(xticks)
