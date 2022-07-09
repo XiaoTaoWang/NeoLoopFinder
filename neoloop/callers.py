@@ -648,8 +648,11 @@ class Peakachu():
         for k in byregion:
             Donuts = byregion[k]
             tmp = self._local_clustering(Donuts, min_count=min_count, r=r)
+            '''
             precise_ = self._local_search(tmp, Donuts, r=r, index_map=index_map,
                                         chains=chains)
+            '''
+            precise_ = set(tmp)
             coords.update(precise_)
         
         return coords

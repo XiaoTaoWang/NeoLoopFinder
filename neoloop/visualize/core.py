@@ -265,7 +265,7 @@ class Triangle(Peakachu):
         self.tad_ax = tad_ax
     
     def plot_loops(self, loop_fil, marker_size=50, face_color='#1F78B4', edgecolors='#1F78B4', 
-        marker_type='o', marker_alpha=1, cluster=True, onlyneo=False, filter_by_res=True):
+        marker_type='o', marker_alpha=1, cluster=True, onlyneo=False, filter_by_res=False):
 
         self.M = sparse.csr_matrix(self.matrix)
         self.r = self.res
