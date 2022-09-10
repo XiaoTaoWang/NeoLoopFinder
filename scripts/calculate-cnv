@@ -158,10 +158,10 @@ def run():
 
             logger.info('Fitting a Generalized Additive Model with log link and Poisson distribution ...')
             fomula = Formula('Coverage ~ s(GC) + s(Mappability) + s(RE)')
-            fomula.environment['Coverage'] = numpy2ri.numpy2ri(filtered['Coverage'].values)
-            fomula.environment['GC'] = numpy2ri.numpy2ri(filtered['GC'].values)
-            fomula.environment['Mappability'] = numpy2ri.numpy2ri(filtered['Mappability'].values)
-            fomula.environment['RE'] = numpy2ri.numpy2ri(filtered['RE'].values)
+            fomula.environment['Coverage'] = numpy2ri.numpy2rpy(filtered['Coverage'].values)
+            fomula.environment['GC'] = numpy2ri.numpy2rpy(filtered['GC'].values)
+            fomula.environment['Mappability'] = numpy2ri.numpy2rpy(filtered['Mappability'].values)
+            fomula.environment['RE'] = numpy2ri.numpy2rpy(filtered['RE'].values)
             gam = mgcv.gam(fomula, family=stats.poisson(link='log'))
             #X = filtered[['GC', 'Mappability', 'RE']].values
             #y = filtered['Coverage'].values
@@ -170,7 +170,7 @@ def run():
             logger.info('Output residuals ...')
             #residuals = gam.deviance_residuals(X, y)
             rs = mgcv.residuals_gam(gam, type='working')
-            residuals = numpy2ri.ri2py(rs)
+            residuals = numpy2ri.rpy2py(rs)
             residuals = residuals - residuals.min()
             #residuals = residuals / residuals.mean()
 
