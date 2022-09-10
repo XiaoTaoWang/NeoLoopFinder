@@ -1,10 +1,8 @@
-from coolbox.core.track import Bed
-from coolbox.plots.track import PlotBed
-from coolbox.utilities import ReadBed, Interval, IntervalTree
+from neoloop.visualize.base import TrackPlot, ReadBed, Interval, IntervalTree, get_logger
 from pyensembl import EnsemblRelease
-import io, logging, bisect
+import io, bisect
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 def get_blocks(bounds, orients, res):
 
@@ -264,7 +262,7 @@ class Genes(object):
         return nondup
 
 
-class plotGenes(PlotBed):
+class plotGenes(TrackPlot):
 
     DEFAULT_COLOR = "#1f78b4"
 
@@ -274,10 +272,10 @@ class plotGenes(PlotBed):
         properties_dict = {
             'file_': file_,
             'file': 'inMemory.bed',
-            'height': Bed.DEFAULT_HEIGHT,
+            'height': 3,
             'color': 'bed_rgb',
             'border_color': 'black',
-            'fontsize': Bed.DEFAULT_FONTSIZE,
+            'fontsize': 12,
             'title': '',
             'labels': 'auto',
             'style': 'flybase',
@@ -329,8 +327,8 @@ class plotGenes(PlotBed):
         if 'color' in self.properties and self.properties['color'] == 'bed_rgb' and \
                 self.bed_type not in ['bed12', 'bed9']:
             log.warning("*WARNING* Color set to 'bed_rgb', but bed file does not have the rgb field. The color has "
-                        "been set to {}".format(PlotBed.DEFAULT_COLOR))
-            self.properties['color'] = PlotBed.DEFAULT_COLOR
+                        "been set to {}".format(self.DEFAULT_COLOR))
+            self.properties['color'] = self.DEFAULT_COLOR
 
         valid_intervals = 0
         interval_tree = {}
@@ -353,6 +351,30 @@ class plotGenes(PlotBed):
             log.warning("No valid intervals were found in file {}".format(self.properties['file_name']))
 
         return interval_tree, min_score, max_score
+    
+    def get_rgb_and_edge_color(self, bed):
+        rgb = self.properties['color']
+        edgecolor = self.properties['border_color']
+
+        if self.colormap:
+            # translate value field (in the example above is 0 or 0.2686...) into a color
+            rgb = self.colormap.to_rgba(bed.score)
+
+        if self.properties['color'] == 'bed_rgb':
+            # if rgb is set in the bed line, this overrides the previously
+            # defined colormap
+            if self.bed_type in ['bed9', 'bed12'] and len(bed.rgb) == 3:
+                try:
+                    rgb = [float(x) / 255 for x in bed.rgb]
+                    if 'border_color' in self.properties:
+                        edgecolor = self.properties['border_color']
+                    else:
+                        edgecolor = self.properties['color']
+                except IndexError:
+                    rgb = self.DEFAULT_COLOR
+            else:
+                rgb = self.DEFAULT_COLOR
+        return rgb, edgecolor
     
     def _get_length_w(self, fig_width, region_start, region_end):
         '''
@@ -509,15 +531,11 @@ class plotGenes(PlotBed):
         """
         from matplotlib.patches import Polygon
 
-        if bed.strand not in ['+', '-']:
-            ax.add_patch(Rectangle((bed.start, ypos), bed.end - bed.start, self.properties['interval_height'],
-                                   edgecolor=edgecolor, facecolor=rgb, linewidth=0.5))
-        else:
-            vertices = self._draw_arrow(ax, bed.start, bed.end, bed.strand, ypos)
-            ax.add_patch(Polygon(vertices, closed=True, fill=True,
-                                 edgecolor=edgecolor,
-                                 facecolor=rgb,
-                                 linewidth=0.5))
+        vertices = self._draw_arrow(ax, bed.start, bed.end, bed.strand, ypos)
+        ax.add_patch(Polygon(vertices, closed=True, fill=True,
+                                edgecolor=edgecolor,
+                                facecolor=rgb,
+                                linewidth=0.5))
     
     def _draw_arrow(self, ax, start, end, strand, ypos):
 
