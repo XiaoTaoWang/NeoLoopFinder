@@ -1,7 +1,3 @@
-.. note:: the reference data for *calculate-cnv* have been migrated to dropbox,
-   if you encounter errors when you run *calculate-cnv*, consider upgrading your
-   package by running ``pip install -U neoloop``.
-
 Neo-loop Finder
 ***************
 .. image:: https://codeocean.com/codeocean-assets/badge/open-in-code-ocean.svg
@@ -9,7 +5,18 @@ Neo-loop Finder
 .. image:: https://static.pepy.tech/personalized-badge/neoloop?period=total&units=international_system&left_color=black&right_color=orange&left_text=Downloads
    :target: https://pepy.tech/project/neoloop
 
-Although recent efforts have shown that structural variations (SVs) can disrupt the 3D genome organization and induce enhancer-hijacking, no computational tools exist to detect such events from chromatin interaction data, such as Hi-C. Here, we develop NeoLoopFinder, a computational framework to identify the chromatin interactions induced by SVs, such as inter-chromosomal translocations, large deletions, and inversions. Our framework can automatically reconstruct local Hi-C maps surrounding the breakpoints, normalize copy number variation and allele effects, and capture local optimal signals. We applied NeoLoopFinder in Hi-C data from 50 cancer cell lines and primary tumors and identified tens of recurrent genes associated with enhancer-hijacking in different cancer types. To validate the algorithm, we deleted hijacked enhancers by CRISPR/Cas9 and showed that the deletions resulted in the reduction of the target oncogene expression. In summary, NeoLoopFinder is a novel tool for identifying potential tumorigenic mechanisms and suggesting new diagnostic and therapeutic targets.
+Although recent efforts have shown that structural variations (SVs) can disrupt the 3D genome
+organization and induce enhancer-hijacking, no computational tools exist to detect such events
+from chromatin interaction data, such as Hi-C. Here, we develop NeoLoopFinder, a computational
+framework to identify the chromatin interactions induced by SVs, such as inter-chromosomal
+translocations, large deletions, and inversions. Our framework can automatically reconstruct
+local Hi-C maps surrounding the breakpoints, normalize copy number variation and allele effects,
+and capture local optimal signals. We applied NeoLoopFinder in Hi-C data from 50 cancer cell
+lines and primary tumors and identified tens of recurrent genes associated with enhancer-hijacking
+in different cancer types. To validate the algorithm, we deleted hijacked enhancers by CRISPR/Cas9
+and showed that the deletions resulted in the reduction of the target oncogene expression. In
+summary, NeoLoopFinder is a novel tool for identifying potential tumorigenic mechanisms and
+suggesting new diagnostic and therapeutic targets.
 
 Citation
 ========
@@ -19,26 +26,28 @@ enhancer-hijacking events from chromatin interaction data in re-arranged genomes
 
 Installation
 ============
-NeoLoopFinder and all the dependencies can be installed using `conda <https://conda.io/miniconda.html>`_
+NeoLoopFinder and all the dependencies can be installed using either `conda <https://conda.io/miniconda.html>`_
 or `pip <https://pypi.org/project/pip/>`_::
 
+    $ conda config --add channels r
     $ conda config --add channels defaults
     $ conda config --add channels bioconda
     $ conda config --add channels conda-forge
-    $ conda create -n neoloop python=3.7.1 cython=0.29.13 cooler=0.8.6 numpy=1.17.2 scipy=1.3.1 joblib=0.13.2 scikit-learn=0.20.2 networkx=1.11 pyensembl=1.8.0 matplotlib=3.1.1 pybigwig=0.3.17 pomegranate=0.10.0
+    $ conda config --set channel_priority strict
+    $ conda create -n neoloop cooler matplotlib pyensembl pybigwig intervaltree scikit-learn=1.1.2 joblib=1.1.0 rpy2 r-mgcv
     $ conda activate neoloop
-    $ conda install -c r r=3.5.1 rpy2=2.9.4 r-mgcv=1.8_23
-    $ pip install neoloop TADLib==0.4.2 coolbox==0.1.7
+    $ pip install -U neoloop TADLib pomegranate
 
 Overview
 ========
-neoloop-finder is distributed with 8 scripts. You can learn the basic usage of each script
+neoloop-finder is distributed with 9 scripts. You can learn the basic usage of each script
 by typing ``command [-h]`` in a terminal window, where "command" is one of the following
 script names:
 
 - calculate-cnv
 
-  Calculate the copy number variation profile from Hi-C map using a generalized additive model with the Poisson link function
+  Calculate the copy number variation profile from Hi-C map using a generalized additive
+  model with the Poisson link function
 
 - segment-cnv
 
@@ -75,25 +84,152 @@ script names:
 
   Search SV assemblies by gene name.
 
-CNV normalization
-=================
-As copy number variations (CNVs) can distort Hi-C signals in cancer cells, we proposed a modified
-matrix balancing algorithm to remove such effects along with other systematic biases including mappability,
-GC content, and restriction fragment sizes. In our implementation, you can perform this CNV normalization by
-sequentially running ``calculate-cnv``, ``segment-cnv``, and ``correct-cnv``. The Hi-C map in
-`.cool <https://github.com/open2c/cooler>`_ format is the only required input to this pipeline, and the
-bias vector returned by this algorithm will be stored in the "sweight" column in the `bins <https://cooler.readthedocs.io/en/latest/datamodel.html#bins>`_
-table of the cool file.
+Tutorial
+========
+This tutorial will cover the overall pipeline of NeoLoopFinder. Given a Hi-C map in
+`.cool/.mcool <https://cooler.readthedocs.io/en/latest/schema.html#multi-resolution>`_
+format and an SV list in the same sample, NeoLoopFinder starts with the inference of
+the genome-wide copy number variations (CNVs) profile and remove the CNV effects from
+Hi-C. Then it resolves complex SVs and reconstructs local Hi-C matrices surrounding SV
+breakpoints. And finally, it detects chromatin loops on each SV/complex SV assembly,
+including both loops in the regions not affected by SVs and loops across the breakpoints.
 
-By default, ``assemble-complexSVs``, ``neoloop-caller``, and ``neotad-caller`` will use the "sweight" column to
-normalize the Hi-C matrix. However, you can change this option to ICE normalization by specifying ``--balance-type ICE``.
+.. image:: ./images/workflow.png
+        :align: center
 
-.. note:: if your .cool files were transformed from .hic files, please make sure to add the "chr" prefix to your cool files using `add_prefix_to_cool.py <https://raw.githubusercontent.com/XiaoTaoWang/NeoLoopFinder/master/scripts/add_prefix_to_cool.py>`_ before your run ``calculate-cnv`` (`issue #1 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/1>`_). Also make sure you have run ``cooler balance`` on your cool files before ``correct-cnv`` (`issue #8 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/8>`_).
+Copy number inference from Hi-C map
+-----------------------------------
+.. note:: If the chromosome names in your .cool files do not have the "chr" prefix,
+please make sure to add the "chr" prefix using `add_prefix_to_cool.py <https://raw.githubusercontent.com/XiaoTaoWang/NeoLoopFinder/master/scripts/add_prefix_to_cool.py>`_
+before your run ``calculate-cnv`` (`issue #1 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/1>`_).
+Also make sure you have run ``cooler balance`` on your cool files before ``correct-cnv``
+(`issue #8 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/8>`_).
 
+First, let's download a processed Hi-C dataset in SK-N-MC (a neuroepithelioma cell line)::
 
-Format of the input SV list
-===========================
-The input SV file to the command ``assemble-complexSVs`` should contain following 6 columns separated by tab::
+    $ wget -O SKNMC-MboI-allReps-filtered.mcool -L 
+
+The downloaded ".mcool" file contains contact matrices at multiple resolutions. To list all
+individual cool URIs within it, execute the ``cooler ls`` command below::
+
+    $ cooler ls SKNMC-MboI-allReps-filtered.mcool
+
+    XXX
+
+To infer the genome-wide CNV profile at a specific resolution, just run *calculate-cnv*
+using the cool URI at that resolution as input. For example, the follow command will
+calculate the CNV profile at the 25kb resolution from this Hi-C data::
+
+    $ calculate-cnv -H SKNMC-MboI-allReps-filtered.mcool::resolutions/25000 -g hg38 \
+                    -e MboI --output SKNMC_25k.CNV-profile.bedGraph
+
+Here the ``-g`` parameter indicates the reference genome you used for mapping
+your Hi-C data, currently the supported genomes includes *hg38*, *hg19*, *mm10*,
+and *mm9*. And the "-e" parameter indicates the restriction enzyme used in your
+Hi-C experiment, currently we support *HindIII*, *MboI*, *DpnII*, *BglII*, *Arima*,
+and *uniform*, where *uniform* can be specified when the genome was cutted using
+a sequence-independent/uniform-cutting enzyme. The inferred CNV values for each 25kb
+bin will be reported in the bedGraph format as follows::
+
+    $ head SKNMC_25k.CNV-profile.bedGraph
+
+    XXX
+
+Then the *segment-cnv* command can be used to identify CNV segments from the original
+CNV signals above::
+
+    $ segment-cnv --cnv-file SKNMC_25k.CNV-profile.bedGraph --binsize 25000 \
+                  --ploidy 2 --output SKNMC_25k.CNV-seg.bedGraph
+
+Here the ``--ploidy`` parameter indicates the ploidy or on average how many copies
+of chromosomes are there in your sample's cell nucleus. In our analysis, we set this
+parameter to 2 for diploid/pseudodiploid cells, 3 for triploid/hypotriploid cells,
+4 for hypotetraploid cells, and 5 for hypopentaploid cells. This information is usually
+obtained from karyotyping, so if you are not sure about it for your samples, you can safely
+set it to 2.
+
+So how does the inferred CNV look like? For this job, you can use the *plot-cnv* command::
+
+    $ plot-cnv --cnv-profile SKNMC_25k.CNV-profile.bedGraph \
+               --cnv-segment SKNMC_25k.CNV-seg.bedGraph \
+               --output-figure-name SKNMC_25k.CNV.genome-wide.png \
+               --dot-size 0.5 --dot-alpha 0.2 --line-width 1 --boundary-width 1 \
+               --label-size 7 --tick-label-size 6 --clean-mode
+
+.. image:: ./images/CNV-genome-wide.png
+        :align: center
+
+If you want to zoom into specific chromosomes, you can specify the chromosome labels
+on the command using the ``-C`` parameter::
+
+    $ plot-cnv --cnv-profile SKNMC_25k.CNV-profile.bedGraph \
+               --cnv-segment SKNMC_25k.CNV-seg.bedGraph \
+               --output-figure-name SKNMC_25k.CNV.genome-wide.png \
+               --dot-size 0.5 --dot-alpha 0.2 --line-width 1 --boundary-width 1 \
+               --label-size 7 --tick-label-size 6 -C 8
+
+.. image:: ./images/CNV-by-chromosome.png
+        :align: center
+
+At the end of this section, let's compute the CNV profiles and CNV segments at 10kb
+and 5kb resolutions as well::
+
+    $ calculate-cnv -H SKNMC-MboI-allReps-filtered.mcool::resolutions/10000 -g hg38 \
+                    -e MboI --output SKNMC_10k.CNV-profile.bedGraph
+    $ segment-cnv --cnv-file SKNMC_10k.CNV-profile.bedGraph --binsize 10000 \
+                  --ploidy 2 --output SKNMC_10k.CNV-seg.bedGraph
+    $ calculate-cnv -H SKNMC-MboI-allReps-filtered.mcool::resolutions/5000 -g hg38 \
+                    -e MboI --output SKNMC_5k.CNV-profile.bedGraph
+    $ segment-cnv --cnv-file SKNMC_5k.CNV-profile.bedGraph --binsize 5000 \
+                  --ploidy 2 --output SKNMC_5k.CNV-seg.bedGraph
+
+Remove CNV biases from Hi-C contacts
+------------------------------------
+As copy number variations (CNVs) can greatly distort Hi-C signals in cancer cells, we
+suggest using the *correct-cnv* command to remove such effects along with other systematic
+biases including mappability, GC content, and restriction fragment sizes from your Hi-C
+data.
+
+The command below will perform this CNV normalization on the above SK-N-MC Hi-C at the 25kb
+resolution::
+
+    $ correct-cnv -H SKNMC-MboI-allReps-filtered.mcool::resolutions/25000 \
+                  --cnv-file SKNMC_25k.CNV-seg.bedGraph --nproc 4 -f
+
+*correct-cnv* uses the Cool URI at a certain resolution and the CNV segmentation file at the
+same resolution as inputs, and after this command has been executed, a bias vector will be
+reported in the "sweight" column in the `bins <https://cooler.readthedocs.io/en/latest/datamodel.html#bins>`_
+table of the cool file, which can be further used to normalize the Hi-C contacts::
+
+    $ cooler dump -t bins -H --na-rep "nan" SKNMC-MboI-allReps-filtered.mcool::resolutions/25000 | head
+
+    XXX
+
+Again, let's perform the CNV normalization at the 10kb and 5kb resolutions as well::
+
+    $ correct-cnv -H SKNMC-MboI-allReps-filtered.mcool::resolutions/10000 \
+                  --cnv-file SKNMC_10k.CNV-seg.bedGraph --nproc 4 -f
+    $ correct-cnv -H SKNMC-MboI-allReps-filtered.mcool::resolutions/5000 \
+                  --cnv-file SKNMC_5k.CNV-seg.bedGraph --nproc 4 -f
+
+Assemble complex SVs
+--------------------
+.. note:: By default, ``assemble-complexSVs``, ``neoloop-caller``, and
+``neotad-caller`` will use the "sweight" column to normalize the Hi-C
+matrix. However, you can change this option to ICE normalization by
+specifying ``--balance-type ICE``.
+
+After you have obtained the CNV-normalized Hi-C matrices, the next step of
+NeoLoopFinder is to reconstruct the Hi-C matrix for the rearranged genomic
+regions surrounding SV breakpoints. This job can be done by the *assemble-complexSVs*
+command.
+
+In addition to cool URIs, the other required input to *assemble-complexSVs* is
+a file containing a list of SVs identified from the same sample. Our recently
+developed software `EagleC <https://github.com/XiaoTaoWang/EagleC>`_ can predict
+and a full range of SVs from Hi-C and report SVs in a format that can be directly
+used here. If your SVs were identified by other software or platforms, please
+prepare your SV list in a 6-column TXT format like this::
 
     chr7    chr14   ++      14000000        37500000        translocation
     chr7    chr14   --      7901149 37573191        translocation
@@ -105,60 +241,66 @@ The input SV file to the command ``assemble-complexSVs`` should contain followin
 5. **b2**: The position of the 2nd breakpoint on *chrB*.
 6. **type**: SV type. Allowable choices are: *deletion*, *inversion*, *duplication*, and *translocation*.
 
+For this tutorial, let's directly run *assemble-complexSVs* with a pre-identified
+SV list in SK-N-MC (by EagleC)::
 
-Tutorial
-========
-This tutorial will cover the basic usage of ``assemble-complexSVs``, ``neoloop-caller`` and the
-visualization module.
+    $ wget -O SKNMC-EagleC.SV.txt -L XX
+    $ assemble-complexSVs -O SKNMC -B SKNMC-EagleC.SV.txt --balance-type CNV --protocol insitu --nproc 6 \
+                          -H SKNMC-MboI-allReps-filtered.mcool::resolutions/25000 \
+                             SKNMC-MboI-allReps-filtered.mcool::resolutions/10000 \
+                             SKNMC-MboI-allReps-filtered.mcool::resolutions/5000 \
 
-First, change your current working directory to the *test* folder and download the Hi-C contact map in K562::
+Here you can pass either one cool URI or a list of cool URIs at multiple resolutions
+to the ``-H`` parameter. And if multiple cool URIs are provided, the program will
+first detect complex SVs from each individual resolution, and then combine results
+from all resolutions in a non-redundant way.
 
-    $ cd test
-    $ wget -O K562-MboI-allReps-hg38.10K.cool https://www.dropbox.com/s/z3z5bye1tuywf18/K562-MboI-allReps-hg38.10K.cool?dl=0
+The job should be finished within ~XXX minutes, and all candidate local assemblies will be reported
+into a TXT file named "SKNMC.assemblies.txt"::
 
-To detect and assemble complex SVs in K562, submit the command below::
+    $ head SKNMC.assemblies.txt
 
-    $ assemble-complexSVs -O K562 -B K562-test-SVs.txt -H K562-MboI-allReps-hg38.10K.cool
-
-The job should be finished within 1 minute, and all candidate local assemblies will be reported into
-a TXT file named "K562.assemblies.txt"::
-
-    A0	translocation,22,23290555,+,9,130731760,-	translocation,9,131280137,+,13,108009063,+	deletion,13,107848624,-,13,93371155,+	22,22300000	13,93200000
-    A1	translocation,9,131280000,+,13,93252000,-	deletion,13,93371155,+,13,107848624,-	9,130720000	13,108030000
-    A2	translocation,22,23290555,+,9,130731760,-	translocation,9,131280000,+,13,93252000,-	22,22300000	13,93480000
-    A3	translocation,22,23290555,+,9,130731760,-	translocation,9,131199197,+,22,16819349,+	22,22300000	22,16240000
-    C0	deletion,13,93371155,+,13,107848624,-	13,93200000	13,108030000
-    C1	translocation,22,16819349,+,9,131199197,+	22,16240000	9,130710000
-    C2	translocation,22,23290555,+,9,130731760,-	22,22300000	9,131290000
-    C3	translocation,9,131280000,+,13,93252000,-	9,130720000	13,93480000
-    C4	translocation,9,131280137,+,13,108009063,+	9,130720000	13,107810000
+    XXX
 
 Then you can detect neo-loops on each assembly using the ``neoloop-caller`` command::
 
-    $ neoloop-caller -O K562.neo-loops.txt -H K562-MboI-allReps-hg38.10K.cool --assembly K562.assemblies.txt --no-clustering --prob 0.95
+    $ neoloop-caller -O SKNMC.neo-loops.txt --assembly SKNMC.assemblies.txt \
+                     --balance-type CNV --protocol insitu --prob 0.95 --nproc 4 \
+                     -H SKNMC-MboI-allReps-filtered.mcool::resolutions/25000 \
+                        SKNMC-MboI-allReps-filtered.mcool::resolutions/10000 \
+                        SKNMC-MboI-allReps-filtered.mcool::resolutions/5000 \
 
-Wait ~1 minute... The loop coordinates in both shuffled (neo-loops) and undisrupted regions near SV breakpoints will be
-reported into "K562.neo-loops.txt" in `BEDPE <https://bedtools.readthedocs.io/en/latest/content/general-usage.html>`_ format::
+Wait ~XXX minutes. Then the loop coordinates in both shuffled (neo-loops) and undisrupted
+regions near SV breakpoints will be reported into "SKNMC.neo-loops.txt" in
+`BEDPE <https://bedtools.readthedocs.io/en/latest/content/general-usage.html>`_ format::
 
-    $ head K562.neo-loops.txt
+    $ head SKNMC.neo-loops.txt
 
-    chr13	93270000	93280000	chr13	107860000	107870000	A0,130000,1
-    chr13	93270000	93280000	chr13	107870000	107880000	A0,140000,1
-    chr13	93270000	93280000	chr13	107980000	107990000	A0,250000,1
-    chr13	93280000	93290000	chr13	107860000	107870000	A0,120000,1
-    chr13	93280000	93290000	chr13	107870000	107880000	A0,130000,1,C0,130000,1
-    chr13	93280000	93290000	chr13	107880000	107890000	A0,140000,1
-    chr13	93280000	93290000	chr13	107970000	107980000	A0,230000,1
-    chr13	93290000	93300000	chr13	107860000	107870000	A1,110000,1,C0,110000,1
-    chr13	93290000	93300000	chr13	107870000	107880000	A1,120000,1,A0,120000,1,C0,120000,1
-    chr13	93300000	93310000	chr13	107870000	107880000	C0,110000,1
+    XXX
 
-The last column records the assembly IDs, the genomic distance between two loop anchors on the assembly and whether this
-is a neo-loop. For example, for the 1st row above, the loop was detected on the assemblies "A0", the genomic
-distance between the two anchors on this assembly is 130K (note that the distance on the reference genome is >14Mb),
-and it is a neo-loop as indicated by "1".
+The last column records the assembly IDs, the genomic distance between two loop anchors on
+the assembly, and whether this is a neo-loop. For example, for the 1st row above, the loop
+was detected on the assemblies "XX", the genomic distance between the two anchors on this
+assembly is 130K (note that the distance on the reference genome is >14Mb), and it is a
+neo-loop as indicated by "1".
 
-Finally, let's reproduce the `figure 1b <https://doi.org/10.1038/s41592-021-01164-w>`_ using the python code below:
+Visualize neo-loops on local assemblies
+---------------------------------------
+In our paper, we showed that neo-loops frequently involved oncogenes or tumor-suppressor
+genes in cancer. So how can we know whether a specific gene is involved in neo-loops or
+not? For this job, we provide the *searchSVbyGene* command, which takes a loop file returned
+by *neoloop-caller* and a gene name as inputs, and output a list of SV assemblies, where
+the input gene is involved in neo-loops on those assemblies::
+
+    $ searchSVbyGene -L SKNMC.neo-loops.txt -G MYC
+
+    XXX
+
+In this case, we searched for the MYC gene, and from the result, we can see MYC is
+involved in neo-loops on the assembles XXX.
+
+Finally, let's plot the Hi-C matrix, the identified neo-loops, and the gene track on XXX,
+using the built-in visualization module of NeoLoopFinder::
 
     >>> from neoloop.visualize.core import * 
     >>> import cooler
@@ -249,3 +391,11 @@ Figure output 3:
         :align: center
 
 Note that both **plot_loops** and **plot_genes** need to be called before **plot_arcs**.
+
+Release Notes
+=============
+Version 0.4.0 (09/16/2022)
+--------------------------
+1. Made it compatible with the latest versions of dependent packages
+2. Changed to Peakachu v2.0 models
+3. Moved all reference data to the 3D genome browser server (http://3dgenome.fsm.northwestern.edu/)

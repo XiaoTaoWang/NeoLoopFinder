@@ -36,6 +36,8 @@ def getargs():
     parser.add_argument('--dot-alpha', default=0.1, type=float, help='''The alpha blending value of the dots,
                         between 0 (transparent) and 1 (opaque).''')
     parser.add_argument('--line-width', default=1, type=float, help='''Width of the CNV segment lines.''')
+    parser.add_argument('--boundary-width', default=1, type=float,
+                        help='''Width of the chromosome boundaries.''')
     parser.add_argument('--label-size', default=6, type=float, help='''Label fontsize.''')
     parser.add_argument('--tick-label-size', default=3, type=float, help='''Fontsize of the tick labels.''')
     parser.add_argument('--maximum-value', type=float, help='''Maximum value.''')
@@ -96,7 +98,7 @@ def run():
             start = end
             xbars.append(start)
         ylim = ax.get_ylim()
-        ax.vlines(xbars, ylim[0], ylim[1], linestyles=':', lw=1)
+        ax.vlines(xbars, ylim[0], ylim[1], linestyles=':', lw=args.boundary_width)
 
         xticks = []
         for s, e in zip(xbars[:-1], xbars[1:]):
