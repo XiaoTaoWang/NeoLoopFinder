@@ -416,8 +416,11 @@ def _prepare_core(pool_args):
     n = hic.shape[0]
     maxdis = min(n-1, maxdis)
     # Assign values for each genomic distance
-    for i in range(1, maxdis+1):
-        valid = tmp[:-i] * tmp[i:]
+    for i in range(maxdis+1):
+        if i == 0:
+            valid = tmp
+        else:
+            valid = tmp[:-i] * tmp[i:]
         current = hic.diagonal(i)[valid]
         if current.size > 0:
             expected[i] = [current.sum(), current.size]
@@ -444,7 +447,7 @@ def calculate_expected(clr, chroms, maxdis=5000000, balance=True, nproc=1):
         pool.join()
 
     expected = {}
-    for i in range(1, maxdis+1):
+    for i in range(maxdis+1):
         nume = 0
         denom = 0
         for extract in results:
@@ -458,8 +461,64 @@ def calculate_expected(clr, chroms, maxdis=5000000, balance=True, nproc=1):
     _d = np.r_[sorted(expected)]
     _y = np.r_[[expected[i] for i in _d]]
     IR.fit(_d, _y)
-    d = np.arange(1, maxdis+1)
+    d = np.arange(maxdis+1)
     exp = IR.predict(d)
     expected = dict(zip(d, exp))
 
     return expected
+
+def distance_normaize_core(sub, exp_bychrom, x, y, w):
+
+    # calculate x and y indices
+    x_arr = np.arange(x-w, x+w+1).reshape((2*w+1, 1))
+    y_arr = np.arange(y-w, y+w+1)
+
+    D = y_arr - x_arr
+    D = np.abs(D)
+    min_dis = D.min()
+    max_dis = D.max()
+    if max_dis >= exp_bychrom.size:
+        return sub
+    else:
+        exp_sub = np.zeros(sub.shape)
+        for d in range(min_dis, max_dis+1):
+            xi, yi = np.where(D==d)
+            for i, j in zip(xi, yi):
+                exp_sub[i, j] = exp_bychrom[d]
+            
+        normed = sub / exp_sub
+
+        return normed
+    
+def image_normalize(arr_2d):
+
+    arr_2d = (arr_2d - arr_2d.min()) / (arr_2d.max() - arr_2d.min()) # value range: [0,1]
+
+    return arr_2d
+
+def distance_normalize(arr_pool, exp_bychrom, xi, yi, w):
+
+    clist = []
+    fea = []
+    for i in range(xi.size):
+        x = xi[i]
+        y = yi[i]
+        window = arr_pool[i]
+
+        bad_x, bad_y = np.where(np.isnan(window))
+        for i_, j_ in zip(bad_x, bad_y):
+            window[i_, j_] = 0
+             
+        if np.count_nonzero(window) < window.size*0.1:
+            continue
+        
+        ll_mean = window[:w, :w].mean()
+        if ll_mean > 0:
+            center = window[w, w]
+            p2LL = center / ll_mean
+            if p2LL > 0.1:
+                window = distance_normaize_core(window, exp_bychrom, x, y, w)
+                fea.append(window)
+                clist.append((x, y))
+    
+    return fea, clist

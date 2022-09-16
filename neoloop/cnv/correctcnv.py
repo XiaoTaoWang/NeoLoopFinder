@@ -2,7 +2,7 @@
 #cython: boundscheck=False
 #cython: cdivision=True
 
-import logging, warnings, h5py
+import logging, warnings, h5py, multiprocess
 import numpy as np
 from cooler import balance, util, Cooler
 from collections import defaultdict
@@ -176,7 +176,7 @@ def matrix_balance(cool_uri, nproc=1, chunksize=int(1e7), mad_max=5,
     
     try:
         if nproc > 1:
-            pool = balance.Pool(nproc)
+            pool = multiprocess.Pool(nproc)
             map_ = pool.imap_unordered
         else:
             map_ = map

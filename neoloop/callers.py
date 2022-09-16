@@ -6,12 +6,13 @@ Created on Wed Jun 27 18:48:42 2018
 
 import logging, neoloop, os, joblib, math
 import numpy as np
-from scipy import sparse, stats
+from scipy import sparse
 from scipy.stats import poisson
 from sklearn.linear_model import HuberRegressor
 from sklearn.isotonic import IsotonicRegression
-from neoloop.util import find_chrom_pre, map_coordinates
+from neoloop.util import find_chrom_pre, map_coordinates, distance_normalize, image_normalize
 from scipy.stats import spearmanr
+from scipy.ndimage import gaussian_filter
 
 log = logging.getLogger(__name__)
 
@@ -525,49 +526,83 @@ class Peakachu():
 
     def __init__(self, matrix, upper=4000000, res=10000, protocol='insitu'):
 
-        self.w = 5
+        self.w = 7
         upper = upper // res
         R, C = matrix.nonzero()
         data = matrix[R, C]
         validmask = np.isfinite(data) & (C-R > (-2*self.w)) & (C-R < (upper+2*self.w))
         R, C, data = R[validmask], C[validmask], data[validmask]
         self.M = sparse.csr_matrix((data, (R, C)), shape=matrix.shape)
-        self.ridx, self.cidx = R, C
+        self.get_candidates(4, upper)
         self.r = res
-
         self.protocol = protocol
     
-    def load_models(self, models_by_res):
+    def get_candidates(self, lower, upper):
+
+        exp_obs = []
+        indices_obs = []
+        for i in range(lower, upper+1):
+            diag = self.M.diagonal(i)
+            if diag.size > 5:
+                exp_obs.append(diag.mean())
+                indices_obs.append(i)
         
-        from sklearn.externals import joblib
+        IR = IsotonicRegression(increasing=False, out_of_bounds='clip')
+        IR.fit(np.r_[indices_obs], np.r_[exp_obs])
+        d = np.arange(lower, upper+1)
+        exp = IR.predict(d)
+        expected = dict(zip(d, exp))
+
+        x_arr = np.array([], dtype=int)
+        y_arr = np.array([], dtype=int)
+        idx = np.arange(self.M.shape[0])
+        for i in range(lower, upper+1):
+            diag = self.M.diagonal(i)
+            e = expected[i]
+            if (diag.size > 1) and (e > 0):
+                xi = idx[:-i]
+                yi = idx[i:]
+                diag = diag / e
+                mask = diag > 1.5
+                x_arr = np.r_[x_arr, xi[mask]]
+                y_arr = np.r_[y_arr, yi[mask]]
         
-        self.model = joblib.load(models_by_res[self.r])
+        self.ridx, self.cidx = x_arr, y_arr
+    
+    def load_models(self, model_fil_path):
+        
+        import joblib
+        
+        self.model = joblib.load(model_fil_path)
+        self.w = int((np.sqrt(self.model.feature_importances_.size) - 1) / 2)
+    
+    def load_expected(self, expected_values):
+
+        self.exp_arr = np.r_[[expected_values[i] for i in sorted(expected_values)]]
     
     def getwindow(self, coords, w):
         '''
         Extract features from center pixels.
         '''
+        coords = np.r_[coords]
+        xi, yi = coords[:,0], coords[:,1]
+        mask = (xi - w >= 0) & (yi + w + 1 <= self.M.shape[0]) & (yi - xi - 2 >= w)
+        xi, yi = xi[mask], yi[mask]
+        if xi.size < 2:
+            return [], []
+        seed = np.arange(-w, w+1)
+        delta = np.tile(seed, (seed.size, 1))
+        xxx = xi.reshape((xi.size, 1, 1)) + delta.T
+        yyy = yi.reshape((yi.size, 1, 1)) + delta
+        v = np.array(self.M[xxx.ravel(), yyy.ravel()]).ravel()
+        vvv = v.reshape((xi.size, seed.size, seed.size))
+        windows, clist = distance_normalize(vvv, self.exp_arr, xi, yi, w)
         fea = []
-        clist = []
-        for x, y in coords:
-            if (x - w < 0) or (y + w + 1 > self.M.shape[0]):
-                # suppose it's a upper-triangular matrix
-                continue
-            if y - x - 2 < self.w:
-                continue
-            window = self.M[x-w:x+w+1, y-w:y+w+1].toarray()
-            if np.count_nonzero(window) < window.size * 0.1:
-                continue
-            
-            if np.mean(window[:w, :w]) > 0:
-                ranks = stats.rankdata(window, method='ordinal')
-                center = window[w, w]
-                p2LL = center/np.mean(window[:w, :w])
-                window = np.r_[window.ravel(), ranks, p2LL]
-                if window.size == 1+2*(1+2*w)**2:
-                    fea.append(window)
-                    clist.append((x, y))
-        
+        for arr in windows:
+            tmp = gaussian_filter(arr, sigma=1, order=0)
+            scaled_arr = image_normalize(tmp)
+            fea.append(scaled_arr.ravel())
+
         fea = np.r_[fea]
         clist = np.r_[clist]
         
@@ -578,7 +613,7 @@ class Peakachu():
         coords = [(r, c) for r, c in zip(self.ridx, self.cidx)]
         loop_list = set()
         fea, clist = self.getwindow(coords, self.w)
-        if len(fea.shape) != 2:
+        if len(fea) < 2:
             return list(loop_list)
         
         probas = self.model.predict_proba(fea)[:, 1]

@@ -259,31 +259,6 @@ class HMMsegment(binCNV):
             scale = 'log'
 
         logger.info('Estimated HMM state number: {0} ({1} scale)'.format(len(means), scale))
-        model = HiddenMarkovModel()
-        # GMM emissions
-        dists = []
-        for m in means:
-            tmp = []
-            for i in range(components):
-                e = m + (-1)**i * ((i+1)//2) * 0.5
-                s = 0.5
-                tmp.append(NormalDistribution(e, s))
-            mixture = State(GeneralMixtureModel(tmp), name=str(m))
-            dists.append(mixture)
-        model.add_states(*tuple(dists))
-        # transition matrix
-        for i in range(len(means)):
-            for j in range(len(means)):
-                if i==j:
-                    model.add_transition(dists[i], dists[j], 0.8)
-                else:
-                    model.add_transition(dists[i], dists[j], 0.2/(len(means)-1))
-        
-        # starts and ends
-        for i in range(len(means)):
-            model.add_transition(model.start, dists[i], probs[i])
-        
-        model.bake()
 
         # training sequences
         tmp = np.zeros(nonzero.size)
@@ -292,9 +267,15 @@ class HMMsegment(binCNV):
         newarr[arr > 0] = tmp
 
         if len(means) > 1:
-            model.fit(self.pieces(newarr, scale=scale), algorithm='baum-welch', n_jobs=self.n_jobs,
-                    max_iterations=5000, stop_threshold=2e-4)
-            
+            model = HiddenMarkovModel.from_samples(
+                NormalDistribution,
+                n_components=len(means),
+                X=self.pieces(newarr, scale=scale),
+                algorithm='baum-welch',
+                stop_threshold=2e-4,
+                max_iterations=5000,
+                n_jobs=self.n_jobs
+            )
             queue = newarr[newarr > 0]
             
             if scale=='log':
@@ -336,7 +317,7 @@ class HMMsegment(binCNV):
 
         return seg
     
-    def get_states(self, arr, maxdist=15):
+    def get_states(self, arr, maxdist=10):
         """
         Chromosome level estimation.
         """

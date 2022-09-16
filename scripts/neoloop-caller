@@ -35,7 +35,7 @@ def getargs():
     parser.add_argument('--cachefolder', default='.cache', help='''Path to a folder to place the pre-trained Peakachu models.
                         This command will automatically download appropriate models according to the
                         sequencing depths and resolutions of your input Hi-C matrices.''')
-    parser.add_argument('-R', '--region-size', default=5000000, type=int,
+    parser.add_argument('-R', '--region-size', default=3000000, type=int,
                         help = '''The extended genomic span of SV break points.(bp)''')
     parser.add_argument('--balance-type', default='CNV', choices=['CNV', 'ICE'],
                         help = 'Normalization method.')
@@ -186,8 +186,10 @@ def pipeline(clr, index, assemblies, rsize, balance, prob, mmp, nopool, models_b
     from neoloop.assembly import complexSV
     import numpy as np
 
+    # force the program to extend the assembly ends by rsize
+    # would be helpful to detect loops near assembly boundaries
     fu = complexSV(clr, assemblies[index], span=rsize, col=balance,
-                   protocol='insitu', expected_values=expected)
+                   protocol='insitu', expected_values=expected, flexible=False)
     fu.reorganize_matrix()
     if len(fu.Map) != fu.fusion_matrix.shape[0]:
         return # invalid assembly
@@ -195,15 +197,21 @@ def pipeline(clr, index, assemblies, rsize, balance, prob, mmp, nopool, models_b
     fu.correct_heterozygosity()
     fu.remove_gaps()
 
-    core = Peakachu(fu.gap_free, upper=4000000, res=fu.res, protocol='insitu')
-    core.load_models(models_by_res)
+    core = Peakachu(fu.gap_free, upper=400*fu.res, res=fu.res, protocol='insitu')
+    core.load_expected(expected_values=expected)
+    core.load_models(models_by_res[fu.res])
     loop_index = core.predict(thre=prob, no_pool=nopool, min_count=mmp, index_map=fu.index_map,
                             chains=fu.chains)
         
     loops = fu.index_to_coordinates(loop_index)
+    # filter out loop calls outside of the original assembly
+    fu = complexSV(clr, assemblies[index], span=rsize, col=balance,
+                   protocol='insitu', expected_values=expected)
+    fu.reorganize_matrix()
     final_dict = {}
     for k in loops:
-        final_dict[k] = (index, loops[k][0], loops[k][1])
+        if ((k[0], k[1]) in fu.Map) and ((k[3], k[4]) in fu.Map):
+            final_dict[k] = (index, loops[k][0], loops[k][1])
 
     return final_dict
 
@@ -224,23 +232,27 @@ def download_peakachu_models(cachefolder, cools):
     data_folder = os.path.join(os.path.split(neoloop.__file__)[0], 'data')
     links = joblib.load(os.path.join(data_folder, 'peakachu-model-links.pkl'))
 
-    # estimate sequencing depth from cool
-    clr = cooler.Cooler(cools[max(cools)])
-    if 'sum' in clr.info:
-        seq_depth = clr.info['sum']
-    else:
-        if clr.info['nnz'] < 100000000:
-            seq_depth = clr.pixels()[:]['count'].values.sum()
-        else:
-            seq_depth = clr.info['nnz'] * 2.14447683
-    intra_depth = seq_depth * 0.73256754
-
     model_by_res = {}
     for res in cools:
         m_res = match_digital_values(list(links), res)
+        # estimate sequencing depth from cool
+        clr = cooler.Cooler(cools[res])
+        if 'sum' in clr.info:
+            seq_depth = clr.info['sum']
+        else:
+            if clr.info['nnz'] < 100000000:
+                seq_depth = clr.pixels()[:]['count'].values.sum()
+            else:
+                seq_depth = clr.info['nnz'] * 2.14447683
+
+        genome_size = clr.chromsizes.sum()
+        seq_depth = 3031042417 / genome_size * seq_depth
+        seq_depth = res / m_res * seq_depth
+        intra_depth = seq_depth * 0.73256754
+
         m_depth = match_digital_values(list(links[m_res]), intra_depth)
         weblink = links[m_res][m_depth]
-        ofil = os.path.join(cachefolder, 'peakachu.res{0}.depth{1}.pkl'.format(m_res, m_depth))
+        ofil = os.path.join(cachefolder, 'peakachu_v2.res{0}.depth{1}.pkl'.format(m_res, m_depth))
         if not os.path.exists(ofil):
             command = ['wget', '-O', ofil, '-L', weblink]
             subprocess.check_call(' '.join(command), shell=True)
