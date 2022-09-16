@@ -13,8 +13,7 @@ currentVersion = neoloop.__version__
 def getargs():
     ## Construct an ArgumentParser object for command-line arguments
     parser = argparse.ArgumentParser(description='''Calculate the copy number variation profile
-                                     from Hi-C map using a generalized additive model with the
-                                     Poisson link function''',
+                                     from Hi-C matrix.''',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     # Version
