@@ -164,7 +164,7 @@ Here the ``--ploidy`` parameter indicates the ploidy or on average how many chro
 copies are there in your sample's cell nucleus. For example, in our analysis,
 we set this parameter to 2 for diploid/pseudodiploid cells, 3 for triploid/hypotriploid
 cells, 4 for hypotetraploid cells, and 5 for hypopentaploid cells. This information
-is usually obtained from karyotyping, so if you are not sure about it for your samples,
+is usually obtained from karyotyping, but if you are not sure about it for your samples,
 you can safely set it to 2.
 
 So how does the inferred CNV look like? For this job, you can use the *plot-cnv* command::
