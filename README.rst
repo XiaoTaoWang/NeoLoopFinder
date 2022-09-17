@@ -240,7 +240,7 @@ NeoLoopFinder is to reconstruct the Hi-C map for the rearranged genomic
 regions surrounding SV breakpoints. This job can be done by the *assemble-complexSVs*
 command.
 
-In addition to cool URIs, the other required input to *assemble-complexSVs* is
+In addition to cool URIs, another required input to *assemble-complexSVs* is
 a file containing a list of SVs identified from the same sample. Our recently
 developed software `EagleC <https://github.com/XiaoTaoWang/EagleC>`_ can predict
 and a full range of SVs from Hi-C and report SVs in a format that can be directly
