@@ -243,7 +243,7 @@ command.
 In addition to cool URIs, another required input to *assemble-complexSVs* is
 a file containing a list of SVs identified from the same sample. Our recently
 developed software `EagleC <https://github.com/XiaoTaoWang/EagleC>`_ can predict
-and a full range of SVs from Hi-C and report SVs in a format that can be directly
+a full range of SVs from Hi-C and report SVs in a format that can be directly
 used here. If your SVs were identified by other software or platforms, please
 prepare your SV list in a 6-column TXT format like this::
 
