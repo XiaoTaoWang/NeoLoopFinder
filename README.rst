@@ -100,7 +100,6 @@ Copy number inference from Hi-C map
    If the chromosome names in your .cool files do not have the "chr" prefix,
    please make sure to add the "chr" prefix using `add_prefix_to_cool.py <https://raw.githubusercontent.com/XiaoTaoWang/NeoLoopFinder/master/scripts/add_prefix_to_cool.py>`_
    before you run ``calculate-cnv`` (`issue #1 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/1>`_).
-
    Also make sure you have run ``cooler balance`` on your cool files before
    you run ``correct-cnv`` (`issue #8 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/8>`_).
 
