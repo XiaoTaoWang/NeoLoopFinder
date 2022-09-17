@@ -322,7 +322,7 @@ assembly is 900K, and it is a neo-loop as indicated by "1".
 Visualize neo-loops on local assemblies
 ---------------------------------------
 In our paper, we showed that neo-loops frequently involved oncogenes or tumor-suppressor
-genes in cancer. So how can we know whether a specific gene is involved in neo-loops or
+genes in cancer. But how can we know whether a specific gene is involved in neo-loops or
 not in a sample? For this job, we provide the *searchSVbyGene* command, which takes a
 loop file returned by *neoloop-caller* and a gene name as inputs, and output a list of
 SV assemblies, where the input gene is involved in neo-loops on those assemblies::
