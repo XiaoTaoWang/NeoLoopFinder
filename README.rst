@@ -155,7 +155,7 @@ as follows::
     chr1	225000	250000	0.0
 
 Since the raw CNV profiles are usually relatively noisy, the next step is to
-identify CNV segments from the original signals above::
+identify CNV segments from the original signals::
 
     $ segment-cnv --cnv-file SKNMC_25k.CNV-profile.bedGraph --binsize 25000 \
                   --ploidy 2 --output SKNMC_25k.CNV-seg.bedGraph
