@@ -314,7 +314,7 @@ regions near SV breakpoints will be reported into "SKNMC.neo-loops.txt" in
     chr1	9700000	9710000	chr1	9850000	9860000	C0,150000,0
     chr1	9720000	9725000	chr1	9860000	9865000	C0,140000,0
 
-The last column records the assembly IDs, the genomic distance between the two loop anchors
+The last column records the assembly IDs, the genomic distance between two loop anchors
 on the assembly, and whether this is a neo-loop. For example, for the 5th row above, the loop
 was detected on the assemblies "C0", the genomic distance between the two anchors on this
 assembly is 900K, and it is a neo-loop as indicated by "1".
