@@ -149,10 +149,12 @@ class HMMsegment(binCNV):
             model = HiddenMarkovModel.from_samples(
                 NormalDistribution,
                 n_components=len(gmm.means_.ravel()),
+                init='kmeans++',
+                n_init=10,
                 X=training_seqs,
                 algorithm='baum-welch',
                 stop_threshold=1e-3,
-                max_iterations=2000,
+                max_iterations=1000,
                 n_jobs=self.n_jobs
             )
             logger.info('Done')
