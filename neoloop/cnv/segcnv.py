@@ -7,7 +7,7 @@ from collections import defaultdict
 import numpy as np
 from sklearn.mixture import GaussianMixture
 from neoloop.cnv.loadcnv import binCNV
-from pomegranate import NormalDistribution, HiddenMarkovModel, GeneralMixtureModel, State
+from pomegranate import NormalDistribution, HiddenMarkovModel
 
 logger = logging.getLogger(__name__)
 
@@ -93,31 +93,40 @@ def combine_segment(sig, cbs_seg, hmm_seg, bufsize=4):
     pool2 = set([b[1] for b in hmm_seg])
     pool = [start] + sorted(pool1 & pool2)
     seg = []
-    for i in range(len(pool)-1):
-        s, e = pool[i], pool[i+1]
-        v = np.median(sig[s:e])
-        seg.extend([v]*(e-s))
-    seg = np.r_[seg]
+    # combine segments with similar copy numbers
+    start, end = pool[0], pool[1]
+    if len(pool) > 2:
+        for i in range(2, len(pool)):
+            ext = pool[i]
+            arr1 = sig[start:end]
+            mask1 = arr1 == 0
+            zero_ratio1 = mask1.sum() / mask1.size
+            arr2 = sig[end:ext]
+            mask2 = arr2 == 0
+            zero_ratio2 = mask2.sum() / mask2.size
+            if (mask1.size < 3) or (mask2.size < 3):
+                seg.append([start, ext])
+                start, end = start, ext
+            else:
+                if (zero_ratio1 > 0.8) or (zero_ratio2 > 0.8):
+                    seg.append([start, end])
+                    start, end = end, ext
+                else:
+                    v1 = np.log2(np.median(arr1[arr1!=0]))
+                    v2 = np.log2(np.median(arr2[arr2!=0]))
+                    if abs(v1 - v2) < 0.4:
+                        seg.append([start, ext])
+                        start, end = start, ext
+                    else:
+                        seg.append([start, end])
+                        start, end = end, ext
+                        
+        if end > seg[-1][1]:
+            seg.append([start, end])
+    else:
+        seg.append([start, end])
 
     return seg
-
-def impute(self, arr):
-
-    zeros = np.where(arr==0)[0]
-    nonzeros = np.where(arr!=0)[0]
-    fill = arr.copy()
-    for i in zeros:
-        idx = nonzeros.searchsorted(i)
-        if (idx == 0) or (idx == nonzeros.size):
-            continue # leading or tailing 0s
-        ri = nonzeros[idx]
-        li = nonzeros[idx-1]
-        if arr[li] < arr[ri]:
-            fill[i] = arr[li]
-        else:
-            fill[i] = arr[ri]
-    
-    return fill
 
 class HMMsegment(binCNV):
 
@@ -127,53 +136,60 @@ class HMMsegment(binCNV):
         self.n_jobs = nproc
         self.ploidy = ploidy
 
-    def segment(self, min_seg=20):
+    def segment(self, min_seg=5):
 
         outlines = []
         counts = defaultdict(int)
         vMap = {}
-        self._original = {}
+        training_seqs, gmm = self.get_states(maxdist=15)
+        if len(gmm.means_.ravel()) > 1:
+            logger.info('Estimated HMM state number: {0}'.format(len(gmm.means_.ravel())))
+            #logger.info('Means of the hidden distributions: {0}'.format(sorted(gmm.means_.ravel())))
+            logger.info('Training HMM ...')
+            model = HiddenMarkovModel.from_samples(
+                NormalDistribution,
+                n_components=len(gmm.means_.ravel()),
+                X=training_seqs,
+                algorithm='baum-welch',
+                stop_threshold=1e-3,
+                max_iterations=2000,
+                n_jobs=self.n_jobs
+            )
+            logger.info('Done')
+        else:
+            model = None
+
         for c in self.bin_cnv:
             logger.info('Segmenting Chromosome {0} ...'.format(c))
             sig = self.bin_cnv[c]
-            sig, hmm_seg, scale = self._segment(sig) # pure HMM-based segmentation
-            self._original[c] = [sig, hmm_seg]
-            logger.info('Combine results from the CBS algorithm ...')
-            if scale=='log':
-                logsig = np.zeros_like(sig)
-                logsig[sig>0] = np.log2(sig[sig>0])
-                cbs_seg = segment(logsig)
+            if not model is None:
+                queue = sig[sig > 0]
+                seq = np.r_[[s.name for i, s in model.viterbi(np.log2(queue))[1][1:]]]
+                hmm_seg = self.assign_cnv(queue, seq)
+                predicted = np.zeros(sig.size)
+                predicted[sig > 0] = hmm_seg
+                hmm_seg = self.call_intervals(predicted)
             else:
-                cbs_seg = segment(sig)
+                hmm_seg = [(0, sig.size)]
+
+            #logger.info('Combine results from the CBS algorithm ...')
+            logsig = np.zeros_like(sig)
+            logsig[sig>0] = np.log2(sig[sig>0])
+            cbs_seg = segment(logsig)
             seg = combine_segment(sig, cbs_seg, hmm_seg) # combine results from cbs and hmm
             
-            cur = [c, 0, 1, seg[0]]
-            for i in range(1, seg.size):
-                v = seg[i]
-                if v == cur[-1]:
-                    cur[2] = cur[2] + 1
+            for s, e in seg:
+                tmp = sig[s:e]
+                mask = tmp==0
+                zero_ratio = mask.sum() / mask.size
+                if zero_ratio > 0.8:
+                    cn = 0
                 else:
-                    tmp = sig[cur[1]:cur[2]]
-                    if tmp.sum() == 0:
-                        cn = 0
-                    else:
-                        cn = int(np.round(np.median(tmp[tmp!=0])*self.ploidy))
-                    cur[3] = cn
-                    vMap[cn] = cn
-                    counts[cn] += (cur[2]-cur[1])
-                    outlines.append(cur)
-                    start = cur[2]
-                    cur = [c, start, start+1, v]
-            
-            tmp = sig[cur[1]:cur[2]]
-            if tmp.sum() == 0:
-                cn = 0
-            else:
-                cn = int(np.round(np.median(tmp[tmp!=0])*self.ploidy))
-            cur[3] = cn
-            vMap[cn] = cn
-            counts[cn] += (cur[2]-cur[1])
-            outlines.append(cur)
+                    cn = int(np.round(np.median(tmp[tmp!=0])*self.ploidy))
+                cur = [c, s, e, cn]
+                outlines.append(cur)
+                vMap[cn] = cn    
+                counts[cn] += (cur[2]-cur[1])
         
         cn_min_count = min(counts.values())
         while cn_min_count < min_seg:
@@ -181,7 +197,7 @@ class HMMsegment(binCNV):
                 if counts[i]==cn_min_count:
                     cn = i
             neighbor = 0
-            mindis = 1000 # a very large number to start
+            mindis = 10000 # a very large number to start
             for i in counts:
                 if i == cn:
                     continue
@@ -240,57 +256,6 @@ class HMMsegment(binCNV):
                     seqs.append(arr[i])
         
         return seqs
-
-    def _segment(self, arr, components=2):
-
-        nonzero = arr[arr > 0.1]
-        idx = self.hampel_filter(np.log2(nonzero))
-        filtered = nonzero[idx]
-
-        log_gmm = self.get_states(np.log2(filtered))
-        log_means, log_probs = log_gmm.means_.ravel(), log_gmm.weights_
-        ln_gmm = self.get_states(filtered) # to improve the sensitivity
-        ln_means, ln_probs = ln_gmm.means_.ravel(), ln_gmm.weights_
-        if (len(log_means) == 1):
-            means, probs = ln_means, ln_probs
-            scale = 'linear'
-        else:
-            means, probs = log_means, log_probs
-            scale = 'log'
-
-        logger.info('Estimated HMM state number: {0} ({1} scale)'.format(len(means), scale))
-
-        # training sequences
-        tmp = np.zeros(nonzero.size)
-        tmp[idx] = filtered
-        newarr = np.zeros(arr.size)
-        newarr[arr > 0.1] = tmp
-
-        if len(means) > 1:
-            model = HiddenMarkovModel.from_samples(
-                NormalDistribution,
-                n_components=len(means),
-                X=self.pieces(newarr, scale=scale),
-                algorithm='baum-welch',
-                stop_threshold=2e-4,
-                max_iterations=5000,
-                n_jobs=self.n_jobs
-            )
-            queue = newarr[newarr > 0]
-            
-            if scale=='log':
-                seq = np.r_[[s.name for i, s in model.viterbi(np.log2(queue))[1][1:]]]
-            else:
-                seq = np.r_[[s.name for i, s in model.viterbi(queue)[1][1:]]]
-            seg = self.assign_cnv(queue, seq)
-            
-            predicted = np.zeros(newarr.size)
-            predicted[newarr > 0] = seg
-            seg = self.call_intervals(predicted)
-        else:
-            seg = [(0, newarr.size)]
-        
-        return newarr, seg, scale
     
     def assign_cnv(self, cnv_profile, hmmseq):
 
@@ -317,12 +282,28 @@ class HMMsegment(binCNV):
 
         return seg
     
-    def get_states(self, arr, maxdist=10):
+    def get_states(self, maxdist=15):
         """
         Chromosome level estimation.
         """
-        X = arr[:, np.newaxis]
+        training_seqs = []
+        whole_genome = np.r_[[]]
+        for c in self.bin_cnv:
+            arr = self.bin_cnv[c]
+            nonzero = arr[arr > 0.1]
+            idx = self.hampel_filter(np.log2(nonzero))
+            filtered = nonzero[idx]
+            whole_genome = np.r_[whole_genome, np.log2(filtered)]
 
+            tmp = np.zeros(nonzero.size)
+            tmp[idx] = filtered
+            newarr = np.zeros(arr.size)
+            newarr[arr > 0.1] = tmp
+
+            self.bin_cnv[c] = newarr
+            training_seqs.extend(self.pieces(newarr, scale='log'))
+        
+        X = whole_genome[:, np.newaxis]
         n_components_range = range(1, maxdist+1)
         _trace_gmm = {}
         bic_arr = []
@@ -336,13 +317,9 @@ class HMMsegment(binCNV):
         
         bic_arr = np.r_[bic_arr]
         best_idx = bic_arr.argmin()
-        #loss_rate = np.abs((bic_arr - bic_arr.min()) / bic_arr.min())
-        #best_idx = np.where(loss_rate < 0.01)[0][-1]
-        
         gmm = _trace_gmm[best_idx+1]
-        
-        return gmm
 
+        return training_seqs, gmm
     
     def hampel_filter(self, arr, ws = 10, n_sigmas = 3):
     

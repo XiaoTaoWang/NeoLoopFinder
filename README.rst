@@ -158,7 +158,7 @@ Since the raw CNV profiles are usually relatively noisy, the next step is to
 identify CNV segments from the original signals::
 
     $ segment-cnv --cnv-file SKNMC_25k.CNV-profile.bedGraph --binsize 25000 \
-                  --ploidy 2 --output SKNMC_25k.CNV-seg.bedGraph
+                  --ploidy 2 --output SKNMC_25k.CNV-seg.bedGraph --nproc 4
 
 Here the ``--ploidy`` parameter indicates the ploidy or on average how many chromosome
 copies are there in your sample's cell nucleus. For example, in our analysis,
@@ -197,11 +197,11 @@ and 5kb resolutions as well::
     $ calculate-cnv -H SKNMC-MboI-allReps-filtered.mcool::resolutions/10000 -g hg38 \
                     -e MboI --output SKNMC_10k.CNV-profile.bedGraph
     $ segment-cnv --cnv-file SKNMC_10k.CNV-profile.bedGraph --binsize 10000 \
-                  --ploidy 2 --output SKNMC_10k.CNV-seg.bedGraph
+                  --ploidy 2 --output SKNMC_10k.CNV-seg.bedGraph --nproc 4 
     $ calculate-cnv -H SKNMC-MboI-allReps-filtered.mcool::resolutions/5000 -g hg38 \
                     -e MboI --output SKNMC_5k.CNV-profile.bedGraph
     $ segment-cnv --cnv-file SKNMC_5k.CNV-profile.bedGraph --binsize 5000 \
-                  --ploidy 2 --output SKNMC_5k.CNV-seg.bedGraph
+                  --ploidy 2 --output SKNMC_5k.CNV-seg.bedGraph --nproc 4
 
 Remove CNV biases from Hi-C contacts
 ------------------------------------
