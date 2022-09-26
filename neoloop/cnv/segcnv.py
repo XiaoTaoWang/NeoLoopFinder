@@ -243,7 +243,7 @@ class HMMsegment(binCNV):
 
     def _segment(self, arr, components=2):
 
-        nonzero = arr[arr > 0]
+        nonzero = arr[arr > 0.1]
         idx = self.hampel_filter(np.log2(nonzero))
         filtered = nonzero[idx]
 
@@ -264,7 +264,7 @@ class HMMsegment(binCNV):
         tmp = np.zeros(nonzero.size)
         tmp[idx] = filtered
         newarr = np.zeros(arr.size)
-        newarr[arr > 0] = tmp
+        newarr[arr > 0.1] = tmp
 
         if len(means) > 1:
             model = HiddenMarkovModel.from_samples(

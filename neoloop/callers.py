@@ -563,7 +563,7 @@ class Peakachu():
                 xi = idx[:-i]
                 yi = idx[i:]
                 diag = diag / e
-                mask = diag > 1.5
+                mask = diag > 0
                 x_arr = np.r_[x_arr, xi[mask]]
                 y_arr = np.r_[y_arr, yi[mask]]
         
