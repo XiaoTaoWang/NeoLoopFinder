@@ -194,7 +194,7 @@ on the command using the ``-C`` parameter::
 Note that most key parameters of the CNV segmentation algorithm is now tunable since
 v0.4.1, so if you are not satisfied with the segmentation outputted by the default
 parameters, it would always be a good idea to tune those parameters yourself to find
-the best solution (see an example here `issue #8 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/3#issuecomment-1261176468>`_).
+the best solution (see an example here `issue #3 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/3#issuecomment-1261176468>`_).
 
 At the end of this section, let's compute the CNV profiles and CNV segments at 10kb
 and 5kb resolutions as well::
