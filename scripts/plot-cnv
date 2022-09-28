@@ -42,6 +42,8 @@ def getargs():
     parser.add_argument('--tick-label-size', default=3, type=float, help='''Fontsize of the tick labels.''')
     parser.add_argument('--maximum-value', type=float, help='''Maximum value.''')
     parser.add_argument('--minimum-value', type=float, help='''Minimum value.''')
+    parser.add_argument('--fig-width', type=float, default=5, help='''Width of the figure.''')
+    parser.add_argument('--fig-height', type=float, default=1, help='''Height of the figure.''')
     parser.add_argument('--dpi', default=500, type=int)
     parser.add_argument('--clean-mode', action = 'store_true')
 
@@ -82,7 +84,7 @@ def run():
         sorted_chroms = sort_chromlabels(chroms)
 
         # plot
-        fig = plt.figure(figsize=(5, 1))
+        fig = plt.figure(figsize=(args.fig_width, args.fig_height))
         ax = fig.add_subplot(111)
         xbars = [0]
         start = 0

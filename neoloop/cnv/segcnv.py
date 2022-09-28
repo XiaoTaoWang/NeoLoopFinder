@@ -55,7 +55,8 @@ def cbs(x, shuffles=1000, p=.05):
 
 def rsegment(x, start, end, L=[], shuffles=1000, p=.05):
     '''
-    Recursively segment the interval x[start:end] returning a list L of pairs (i,j) where each (i,j) is a significant segment.
+    Recursively segment the interval x[start:end] returning a list
+    L of pairs (i,j) where each (i,j) is a significant segment.
     '''
     threshold, t, s, e = cbs(x[start:end], shuffles=shuffles, p=p)
     if (not threshold) | (e-s < 5) | (e-s == end-start):
@@ -81,7 +82,7 @@ def segment(x, shuffles=1000, p=1e-5):
 
     return L
 
-def combine_segment(sig, cbs_seg, hmm_seg, bufsize=4):
+def combine_segment(sig, cbs_seg, hmm_seg, min_seg, min_diff, bufsize=4):
 
     start = cbs_seg[0][0]
     pool1 = set()
@@ -104,51 +105,68 @@ def combine_segment(sig, cbs_seg, hmm_seg, bufsize=4):
             arr2 = sig[end:ext]
             mask2 = arr2 == 0
             zero_ratio2 = mask2.sum() / mask2.size
-            if (mask1.size < 3) or (mask2.size < 3):
-                seg.append([start, ext])
+            if (mask1.size < min_seg) or (mask2.size < min_seg):
+                _add_seg(seg, [start, ext])
                 start, end = start, ext
             else:
                 if (zero_ratio1 > 0.8) or (zero_ratio2 > 0.8):
-                    seg.append([start, end])
+                    _add_seg(seg, [start, end])
                     start, end = end, ext
                 else:
                     v1 = np.log2(np.median(arr1[arr1!=0]))
                     v2 = np.log2(np.median(arr2[arr2!=0]))
-                    if abs(v1 - v2) < 0.4:
-                        seg.append([start, ext])
+                    if abs(v1 - v2) < min_diff:
+                        _add_seg(seg, [start, ext])
                         start, end = start, ext
                     else:
-                        seg.append([start, end])
+                        _add_seg(seg, [start, end])
                         start, end = end, ext
                         
         if end > seg[-1][1]:
-            seg.append([start, end])
+            _add_seg(seg, [start, end])
     else:
-        seg.append([start, end])
+        _add_seg(seg, [start, end])
 
     return seg
 
+def _add_seg(seg, r):
+
+    if not len(seg):
+        seg.append(r)
+    else:
+        if r[0]==seg[-1][0]:
+            seg[-1] = r
+        else:
+            seg.append(r)
+
 class HMMsegment(binCNV):
 
-    def __init__(self, bedgraph, res, nproc=1, ploidy=2):
+    def __init__(self, bedgraph, res, nproc=1, ploidy=2, n_states=None):
 
         binCNV.__init__(self, bedgraph, res)
         self.n_jobs = nproc
         self.ploidy = ploidy
+        self.n_states = n_states
 
-    def segment(self, min_seg=5):
+    def segment(self, min_seg=5, min_diff=0.4, p=1e-5, max_dist=4):
 
         outlines = []
         counts = defaultdict(int)
         vMap = {}
-        training_seqs, gmm = self.get_states(maxdist=15)
-        if len(gmm.means_.ravel()) > 1:
-            logger.info('Estimated HMM state number: {0}'.format(len(gmm.means_.ravel())))
-            #logger.info('Means of the hidden distributions: {0}'.format(sorted(gmm.means_.ravel())))
-            logger.info('Training HMM ...')
+        training_seqs, gmm = self.get_states(maxdist=10)
+        if self.n_states is None:
+            n_states = len(gmm.means_.ravel())
+            #logger.info('Estimated HMM state number: {0}'.format(n_states))
+            #logger.info('Means of the hidden distributions: {0}'.format(gmm.means_.ravel()))
+            #logger.info('Covariances of the hidden distributions: {0}'.format(gmm.covariances_.ravel()))
+        else:
+            n_states = self.n_states
+
+        if n_states > 1:
+            logger.info('Training HMM with {0} states...'.format(n_states))
             model = HiddenMarkovModel.from_samples(
                 NormalDistribution,
-                n_components=len(gmm.means_.ravel()),
+                n_components=n_states,
                 init='kmeans++',
                 n_init=10,
                 X=training_seqs,
@@ -177,8 +195,9 @@ class HMMsegment(binCNV):
             #logger.info('Combine results from the CBS algorithm ...')
             logsig = np.zeros_like(sig)
             logsig[sig>0] = np.log2(sig[sig>0])
-            cbs_seg = segment(logsig)
-            seg = combine_segment(sig, cbs_seg, hmm_seg) # combine results from cbs and hmm
+            cbs_seg = segment(logsig, p=p)
+            seg = combine_segment(sig, cbs_seg, hmm_seg, min_seg,
+                                  min_diff, bufsize=max_dist) # combine results from cbs and hmm
             
             for s, e in seg:
                 tmp = sig[s:e]
@@ -194,7 +213,7 @@ class HMMsegment(binCNV):
                 counts[cn] += (cur[2]-cur[1])
         
         cn_min_count = min(counts.values())
-        while cn_min_count < min_seg:
+        while cn_min_count < 5: # total number of bins with the a specific copy number must greater than this value
             for i in counts:
                 if counts[i]==cn_min_count:
                     cn = i
@@ -308,17 +327,19 @@ class HMMsegment(binCNV):
         X = whole_genome[:, np.newaxis]
         n_components_range = range(1, maxdist+1)
         _trace_gmm = {}
-        bic_arr = []
+        aic_arr = []
         for n_components in n_components_range:
             gmm = GaussianMixture(n_components=n_components,
-                                covariance_type='diag')
+                                  covariance_type='diag',
+                                  init_params='k-means++',
+                                  n_init=10)
             gmm.fit(X)
-            bic = gmm.bic(X)
-            bic_arr.append(bic)
+            aic = gmm.aic(X)
+            aic_arr.append(aic)
             _trace_gmm[n_components] = gmm
         
-        bic_arr = np.r_[bic_arr]
-        best_idx = bic_arr.argmin()
+        aic_arr = np.r_[aic_arr]
+        best_idx = aic_arr.argmin()
         gmm = _trace_gmm[best_idx+1]
 
         return training_seqs, gmm
