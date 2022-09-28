@@ -418,7 +418,6 @@ class Triangle(Peakachu):
         self.arc_x = x
         self.arc_y = y
             
-
     def plot_chromosome_bar(self, coord_ypos=0.3, name_ypos=0, coord_size=3.5, name_size=7,
         width=3, headwidth=8, remove_coord=False, color_by_order=[]):
 
@@ -466,11 +465,16 @@ class Triangle(Peakachu):
                 else:
                     chroms.append([b[1][0], b[0], b[0]])
         
+        unique_chrom_names = set([c[0] for c in chroms])
         for c in chroms:
             si = self.hx[:-1, :-1][n-1-c[1], c[1]]
             ei = self.hx[:-1, :-1][n-1-c[2], c[2]]
-            chrom_ax.text((si+ei)/2, name_ypos, 'chr'+c[0].lstrip('chr'),
-                    ha='center', va='top', fontsize=name_size)
+            if len(unique_chrom_names) > 1:
+                chrom_ax.text((si+ei)/2, name_ypos, 'chr'+c[0].lstrip('chr'),
+                        ha='center', va='top', fontsize=name_size)
+            else:
+                chrom_ax.text((si+ei)/2, name_ypos-0.15, 'chr'+c[0].lstrip('chr'),
+                        ha='center', va='top', fontsize=name_size)
         
         chrom_ax.axis('off')
     

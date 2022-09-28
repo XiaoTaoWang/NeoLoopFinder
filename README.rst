@@ -191,6 +191,11 @@ on the command using the ``-C`` parameter::
 .. image:: ./images/SKNMC_25k.CNV.bychrom.png
         :align: center
 
+Note that most key parameters of the CNV segmentation algorithm is now tunable since
+v0.4.1, so if you are not satisfied with the segmentation outputted by the default
+parameters, it would always be a good idea to tune those parameters yourself to find
+the best solution (see an example here `issue #8 <https://github.com/XiaoTaoWang/NeoLoopFinder/issues/3#issuecomment-1261176468>`_).
+
 At the end of this section, let's compute the CNV profiles and CNV segments at 10kb
 and 5kb resolutions as well::
 
@@ -441,3 +446,8 @@ Version 0.4.0 (09/16/2022)
 1. Made it compatible with the latest versions of dependent packages
 2. Changed to Peakachu v2.0 models
 3. Moved all reference data to the 3D genome browser server (http://3dgenome.fsm.northwestern.edu/)
+
+Version 0.4.2 (09/28/2022)
+--------------------------
+1. For CNV segmentation, changed to use the genome-wide CNV profiles to train HMM models
+2. Made key parameters of the CNV segmentation algorithm tunable

@@ -127,14 +127,17 @@ class PlotBigWig(TrackPlot):
         if 'positive_color' not in self.properties or 'negative_color' not in self.properties:
             self.ax.fill_between(x_values, scores_per_bin, linewidth=0.1,
                                  color=self.properties['color'],
-                                 facecolor=self.properties['color'])
+                                 facecolor=self.properties['color'],
+                                 rasterized=True)
         else:
             self.ax.fill_between(x_values, 0, scores_per_bin, where=(scores_per_bin > 0),
                                  linewidth=0.1, color=self.properties['positive_color'],
-                                 facecolor=self.properties['positive_color'])
+                                 facecolor=self.properties['positive_color'],
+                                 rasterized=True)
             self.ax.fill_between(x_values, 0, scores_per_bin, where=(scores_per_bin < 0),
                                  linewidth=0.1, color=self.properties['negative_color'],
-                                 facecolor=self.properties['negative_color'])
+                                 facecolor=self.properties['negative_color'],
+                                 rasterized=True)
 
     def __adjust_plot(self, genome_range):
         self.ax.set_xlim(genome_range.start, genome_range.end)
