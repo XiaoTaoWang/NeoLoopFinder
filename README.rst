@@ -105,7 +105,7 @@ Copy number inference from Hi-C map
 
 First, let's download a processed Hi-C dataset in SK-N-MC (a neuroepithelioma cell line)::
 
-    $ wget -O SKNMC-MboI-allReps-filtered.mcool -L https://www.dropbox.com/s/tuhhrecipkp1u8k/SKNMC-MboI-allReps-filtered.mcool?dl=0
+    $ wget -O SKNAS-MboI-allReps-filtered.mcool -L https://www.dropbox.com/s/f80bgn11d7wfgq8/SKNAS-MboI-allReps-filtered.mcool?dl=0
 
 The downloaded ".mcool" file contains contact matrices at multiple resolutions. To list all
 individual cool URIs within it, execute the ``cooler ls`` command below::
