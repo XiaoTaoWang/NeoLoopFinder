@@ -111,6 +111,8 @@ def run():
             xticks = tmp
             tmp = [sorted_chroms[i] for i in range(0, len(sorted_chroms), 2)]
             chroms = tmp
+        else:
+            chroms = sorted_chroms
 
         ax.set_xticks(xticks)
         ax.set_xticklabels(chroms, fontsize=args.tick_label_size)
