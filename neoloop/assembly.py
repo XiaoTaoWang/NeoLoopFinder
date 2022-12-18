@@ -211,7 +211,18 @@ class assembleSV(object):
                     ori = o
         
         if ori > 0:
-            return 1 / ori
+            # pre-filter every edge of the graph
+            p = (r1, r2)
+            ck, p = filterAssembly(self.clr,
+                                   self._change_format(p),
+                                   self.span,
+                                   self.balance_type,
+                                   p, self.protocol,
+                                   self.expected)
+            if ck:
+                return 1 / ori
+            else:
+                return np.inf
         else:
             return np.inf
     
