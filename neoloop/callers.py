@@ -584,6 +584,9 @@ class Peakachu():
         '''
         Extract features from center pixels.
         '''
+        if len(coords) < 2:
+            return [], []
+            
         coords = np.r_[coords]
         xi, yi = coords[:,0], coords[:,1]
         mask = (xi - w >= 0) & (yi + w + 1 <= self.M.shape[0]) & (yi - xi - 2 >= w)
