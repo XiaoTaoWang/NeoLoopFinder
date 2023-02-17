@@ -26,7 +26,7 @@ enhancer-hijacking events from chromatin interaction data in re-arranged genomes
 
 Installation
 ============
-NeoLoopFinder and all the dependencies can be installed using either `conda <https://conda.io/miniconda.html>`_
+NeoLoopFinder and all the dependencies can be installed using either `mamba <https://mamba.readthedocs.io/en/latest/installation.html>`_
 or `pip <https://pypi.org/project/pip/>`_::
 
     $ conda config --add channels r
@@ -34,8 +34,8 @@ or `pip <https://pypi.org/project/pip/>`_::
     $ conda config --add channels bioconda
     $ conda config --add channels conda-forge
     $ conda config --set channel_priority strict
-    $ conda create -n neoloop cooler matplotlib pyensembl pybigwig intervaltree scikit-learn=1.1.2 joblib=1.1.0 rpy2 r-mgcv
-    $ conda activate neoloop
+    $ mamba create -n neoloop cooler matplotlib pyensembl pybigwig intervaltree scikit-learn=1.1.2 joblib=1.1.0 rpy2 r-mgcv
+    $ mamba activate neoloop
     $ pip install -U neoloop TADLib pomegranate
 
 Overview
