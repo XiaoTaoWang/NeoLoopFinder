@@ -819,7 +819,7 @@ class Peakachu():
                     tmp = np.r_[Local]
                     # assign centroid to a certain pixel
                     cen = tuple(tmp.mean(axis=0).round().astype(int))
-                    rad = np.int(np.round(max([euclidean(cen,q) for q in Local]))) + r
+                    rad = np.int64(np.round(max([euclidean(cen,q) for q in Local]))) + r
                     sub = np.r_[out]
                 for q in Local:
                     pool.add(q)
