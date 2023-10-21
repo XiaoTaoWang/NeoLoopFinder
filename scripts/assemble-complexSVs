@@ -34,10 +34,12 @@ def getargs():
                         help = '''The extended genomic span of SV break points.(bp)''')
     parser.add_argument('--minimum-size', default=500000, type=int,
                         help = '''For intra-chromosomal SVs, only SVs that are larger than this size will be considered by the pipeline.''')
-    parser.add_argument('--balance-type', default='CNV', choices=['CNV', 'ICE'],
+    parser.add_argument('--balance-type', default='CNV', choices=['CNV', 'ICE', 'RAW'],
                         help = 'Normalization method.')
-    parser.add_argument('--protocol', default='insitu', choices=['insitu', 'dilution'],
-                        help='''Experimental protocol of your Hi-C.''')
+    parser.add_argument('--platform', default='Hi-C', choices=['Hi-C', 'CTCF-ChIAPET', 'Pol2-ChIAPET',
+                                                               'H3K27ac-HiChIP', 'H3K4me3-HiChIP', 'CTCF-HiChIP',
+                                                               'SMC1A-HiChIP', 'HiCAR', 'TrAC-loop'],
+                        help='''Name of the experimental platform you used to generate your chromatin contact data.''')
     parser.add_argument('--nproc', default=1, type=int, help='Number of worker processes.')
     parser.add_argument('--logFile', default = 'assembleSVs.log', help = '''Logging file name.''')
 
